@@ -24,7 +24,10 @@ def getToolArguments(config, testName):
     for option in options:
         if (option != 'tool') & (option != 'command'):
             args.append(option)
-            args.append(config.get(testName, option))
+            value = config.get(testName, option)
+            if (option.startswith('--') & not value):
+                continue
+            args.append()
     return args
 
 #This function validates the commands and tools and raise an error, command
