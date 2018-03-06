@@ -14,6 +14,7 @@ def createArgumentParser():
 # in conf directory
 def loadConfiguration(configFile):
     config = ConfigParser.ConfigParser(allow_no_value=True)
+    config.optionxform = str	
     config.readfp(open('conf/'+configFile))
     return config
 
@@ -25,9 +26,9 @@ def getToolArguments(config, testName):
         if (option != 'tool') & (option != 'command'):
             args.append(option)
             value = config.get(testName, option)
-            if (option.startswith('--') & not value):
+            if (option.startswith('--')):
                 continue
-            args.append()
+            args.append(value)
     return args
 
 #This function validates the commands and tools and raise an error, command
@@ -51,7 +52,8 @@ def constructCommand(config, testName):
 
 def executeCommand(process):
     p = subprocess.Popen(process)
-    result = p.communicate
+    result = p.communicate()
+    print '####RESULT OF TEST####'	
     print result
 
 def main():
