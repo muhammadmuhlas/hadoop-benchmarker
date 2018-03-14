@@ -18,7 +18,7 @@ def createArgumentParser():
 def loadConfiguration(configFile):
     config = ConfigParser.ConfigParser(allow_no_value=True)
     config.optionxform = str
-    config.readfp(open('conf/'+configFile))
+    config.readfp(open(configFile))
     return config
 
 #This function extracts the argument of the command.
@@ -78,6 +78,12 @@ def createOpenFile(filepath, fileOp):
 def log(message):
     print message
 
+def recordPeLatency(lines, summaryFile):
+    searchKeys = ['Min', 'Avg', 'StdDev', '50th', '75th', '95th', '99th', '99.9th', '99.99th', '99.999th', 'Max']
+    for key in searchKeys:
+        line = next(lines)
+        summaryFile.write(line[line.index(key):]+'\n')
+
 
 def main():
     print 'Starting Tests....'
@@ -91,8 +97,11 @@ def main():
     print testNames
 
     FILE_FLAG_CREATE_IF_NOT_EXISTS = "a+"
-    logFileName = "logs/"+args.configFile+str(time.time())+'.out'
-    resultFileName = "results/"+args.configFile+str(time.time())+'_results.out'
+    LOG_DIR = "logs"
+    RESULT_DIR = "results"
+    fileName = os.path.split(args.configFile)[1]
+    logFileName = os.path.join(LOG_DIR,fileName+str(time.time())+'.out')
+    resultFileName = os.path.join(RESULT_DIR,fileName+str(time.time())+'_results')
 
     outfile = createOpenFile(logFileName, FILE_FLAG_CREATE_IF_NOT_EXISTS)
     summary = createOpenFile(resultFileName, FILE_FLAG_CREATE_IF_NOT_EXISTS)
@@ -102,13 +111,18 @@ def main():
             log('running test: '+testName)
             process = constructCommand(testRunConfig, testName)
             result = executeCommand(process)
-            outfile.write("######"+testName+"############\n")
-            summary.write("######"+testName+"############\n")
-            summary.write(str(process))
+            outfile.write("###"+testName+"###\n")
+            summary.write("###"+testName+"###\n")
+            summary.write(str(process)+'\n')
             outfile.write(result[0])
-            for line in result[0].splitlines():
+            lines = iter(result[0].splitlines())
+            for line in lines:
+                if 'latency log' in line:
+                    summary.write("#Latency Log#\n");
+                    recordPeLatency(lines, summary)
+                    continue
                 if 'Summary of timings' in line:
-                    summary.write(line[line.index("Summary of timings"):])
+                    summary.write(line[line.index("Summary of timings"):]+'\n')
             log('completed test: '+testName)
         except Exception as exp:
             print 'Test: '+testName +' is failed ', exp
