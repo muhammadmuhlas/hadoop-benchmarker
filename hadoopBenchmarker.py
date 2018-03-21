@@ -8,6 +8,14 @@ import json
 
 #create a parser which evaluate command line arguments.
 def createArgumentParser():
+    """ A utility method to make sure correct argument are passed to hadoop benchmarker programe.
+    Args:
+        None
+
+    Returns:
+       parser :ArgumentParser
+
+    """
     usage = './bin/hadoop-benchmarker.sh --config-file <configFileName>'
     parser = argparse.ArgumentParser(usage=usage)
     parser.add_argument('--config-file','-c' , dest='configFile', required=True)
@@ -16,17 +24,39 @@ def createArgumentParser():
 # configuration for tests are loaded. The configuration files are expected to be
 # in conf directory
 def loadConfiguration(configFile):
+    """ This function reads given config file and constructs a ConfigParser obj.
+    Args:
+       configFile : config file path
+    Returns:
+        config: ConfigParser obj
+    """
     config = ConfigParser.ConfigParser(allow_no_value=True)
     config.optionxform = str
     config.readfp(open(configFile))
     return config
 
 def executeCommand(process):
+    """This function runs the command. The command details is given as process.
+
+    Args:
+        process list : a list of options to run the command.
+
+    Returns:
+            result tuple: a tuple which contains the console output. All the output is redirected to stdout for simplicity
+    """
     p = subprocess.Popen(process, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     result = p.communicate()
     return result
 
 def getTestRunParams(config, testName):
+    """ This function scans configuration file for a test and creates a dict from
+        its parameters.
+    Args:
+         config : a ConfigParser object
+         testName : a string which represents a section in config file.
+    Returns:
+         params: a dictionary which contains all the parameters for a given test run.
+    """
     params = {}
     options = config.options(testName)
     for option in options:
@@ -36,19 +66,33 @@ def getTestRunParams(config, testName):
     return params
 #This function extracts the argument of the command.
 def getPeArguments(config, testName):
+    """reads configuration for PE test and construct an array of all parameters
+    Args:
+       config: ConfigParser
+       testName: string
+    Returns:
+         args: dict
+    """
     args = []
     commandArgs =''
+    peTestType = ''
     options = config.options(testName)
     for option in options:
         if (option != 'tool') & (option != 'command'):
             if option == 'nClients':
                 commandArgs = config.get(testName, option)
                 continue
+            if option == 'testType':
+                peTestType = config.get(testName, option)
+                continue
             value = config.get(testName, option)
             if not value:
                 args.append(option)
                 continue
             args.append(option+"="+value)
+
+    if peTestType:
+        args.append(peTestType)
 
     if commandArgs:
         args.append(commandArgs)
@@ -182,6 +226,16 @@ def getYCSBArguments(config, testName):
 #This function validates the commands and tools and raise an error, command
 # and tool are not in allowed list
 def constructCommand(config, testName):
+    """base function to construct test command/process parameters. It delegates
+    the work to tool specific method.
+    Args:
+      config: ConfigParser
+      testName: string
+
+    Returns:
+      process : list
+
+    """
     process = []
     allowedCommands = ['hbase', 'ycsb']
     allowedTools = ['pe', 'load', 'run']
@@ -199,16 +253,29 @@ def constructCommand(config, testName):
     elif command == 'ycsb':
         process = getYCSBArguments(config, testName)
 
-    print process
     return process
 
 
 def createDirectories(dirs):
+    """utility method to create directories if directories don't exist
+    Args:
+       dirs: list of directories to be created.
+    Returns:
+       None
+    """
     for directory in dirs:
         if not os.path.exists(directory):
             os.makedirs(directory)
 
 def createOpenFile(filepath, fileOp):
+    """Open a file for given file operation e.g. to read, to write or to append
+     Args:
+        filepath: string path
+        fileop: file open operator flag w, r, a
+
+     Returns:
+       a file object
+    """
     if not os.path.exists(os.path.dirname(filepath)):
         os.makedirs(os.path.dirname(filepath))
     return open(filepath, fileOp)
