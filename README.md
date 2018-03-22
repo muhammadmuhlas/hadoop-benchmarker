@@ -8,4 +8,5 @@
 - The last two options must be type of test and number of clients respectively. i.e. `randomWrite`, `randomRead` etc.
 
 ## YCSB tests
-YCSB tests are supported. See the `ycsb_sample.cfg` file to create other test runs.
+YCSB tests are supported. See the `ycsb_sample.cfg` file to create other test runs. To setup YCSB on your system, please follow instructions at https://github.com/brianfrankcooper/YCSB/wiki/Getting-Started
+
