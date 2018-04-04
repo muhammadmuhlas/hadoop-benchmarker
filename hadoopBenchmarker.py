@@ -5,6 +5,27 @@ import time
 import os
 import traceback
 import json
+import shutil
+
+# constants
+FILE_FLAG_CREATE_IF_NOT_EXISTS = "a+"
+LOG_DIR = "/tmp/logs"
+RESULT_DIR = "/tmp/results"
+
+EXECUTION_TIME = 'ExecutionTime'
+PARAMS = 'params'
+COMMAND = 'command'
+YCSB = 'ycsb'
+HBASE = 'hbase'
+NAME = 'name'
+SUMMARY = 'summary'
+OPERATIONS = 'operations'
+UPDATE = 'update'
+INSERT = 'insert'
+READ = 'read'
+
+
+
 
 #create a parser which evaluate command line arguments.
 def createArgumentParser():
@@ -375,16 +396,133 @@ def extractYSCBResults(lines):
     if not summary_results:
         summary_results["ERROR"] = "No results found, please see log files"
 
-    ycsb_results['summary'] = summary_results
+    ycsb_results[SUMMARY] = summary_results
 
     operations = {}
-    operations['read'] = read_results
+    operations[READ] = read_results
     operations['cleanup'] = cleanup_results
-    operations['insert'] = insert_results
-    operations['update'] = update_results
-    ycsb_results['operations'] = operations
+    operations[INSERT] = insert_results
+    operations[UPDATE] = update_results
+    ycsb_results[OPERATIONS] = operations
 
     return ycsb_results
+
+def copyHadoopConfigFiles(targetDir):
+    """ copies hadoop configuration file to result directory so configuration can be captured when tests were executed.
+
+    Args:
+        targetDir the folder where configuration files will be copied. `conf` subdirectoy is created for configuration files.
+
+    Returns: None
+    """
+    configFiles = ['/etc/hadoop/conf/core-site.xml', '/etc/hadoop/conf/hdfs-site.xml', '/etc/hbase/conf/hbase-site.xml']
+    confDir = os.path.join(targetDir, "conf")
+    createDirectories([confDir])
+
+    for file in configFiles:
+        shutil.copy(file, confDir)
+
+def getYCSBRow(TestResult):
+    pass
+
+def getYCSBRow(TestResult):
+    """
+
+    Args:
+
+    Returns:
+
+    """
+    TYPE = 'Type'
+    RECORDS = 'Records'
+    RUNTIME = 'Runtime(ms)'
+    THROUGHPUT = 'Throughput(ops/sec)'
+    READOPSCOUNT = 'ReadOpsCount'
+    READOPS_AVERAGELATENCY = 'ReadOps_AverageLatency(us)'
+    INSERTOPSCOUNT = 'InsertOpsCount'
+    INSERTOPS_AVERAGELATENCY = 'InsertOps_AverageLatency(us)'
+    UPDATEOPSCOUNT = 'UpdateOpsCount'
+    UPDATEOPS_AVERAGELATENCY = 'UpdateOps_AverageLatency(us)'
+
+    # Initialize row
+    row = {EXECUTION_TIME : '', TYPE : '', RECORDS : '', RUNTIME : '', THROUGHPUT : '',
+           READOPSCOUNT : '', READOPS_AVERAGELATENCY :'',
+           INSERTOPSCOUNT : '', INSERTOPS_AVERAGELATENCY : '',
+           UPDATEOPSCOUNT : '', UPDATEOPS_AVERAGELATENCY : ''}
+
+    if PARAMS in TestResult.keys():
+        row[RECORDS] = TestResult[PARAMS]['recordcount']
+
+    if EXECUTION_TIME in TestResult.keys():
+        row[EXECUTION_TIME] = TestResult[EXECUTION_TIME]
+
+    if SUMMARY in TestResult.keys():
+        row[RUNTIME] = TestResult[SUMMARY][RUNTIME]
+        row[THROUGHPUT] = TestResult[SUMMARY][THROUGHPUT]
+
+    if OPERATIONS in TestResult.keys():
+        if TestResult[OPERATIONS][READ]:
+            row[READOPSCOUNT] = TestResult[OPERATIONS][READ]['Operations']
+            row[READOPS_AVERAGELATENCY] = TestResult[OPERATIONS][READ]['AverageLatency(us)']
+
+        if TestResult[OPERATIONS][INSERT]:
+            row[INSERTOPSCOUNT] = TestResult[OPERATIONS][INSERT]['Operations']
+            row[INSERTOPS_AVERAGELATENCY] = TestResult[OPERATIONS][INSERT]['AverageLatency(us)']
+
+        if TestResult[OPERATIONS][UPDATE]:
+            row[UPDATEOPSCOUNT] = TestResult[OPERATIONS][UPDATE]['Operations']
+            row[UPDATEOPS_AVERAGELATENCY] = TestResult[OPERATIONS][UPDATE]['AverageLatency(us)']
+
+    return row
+
+def createTabularSummary(resultFilepath):
+    """ It reads `resultFile` and extract subset of output fields to create a summary of results in csv format and save
+    result in results directory.
+
+    Args:
+        `resultFilepath` json file which contains the result of tests.
+
+    Returns: None
+    """
+    if not os.path.exists(resultFilepath):
+        log(resultFilepath +' not exists, please see log files to debug')
+        return
+
+    resultDir = os.path.dirname(resultFilepath)
+    ycsbSummaryFile = os.path.join(resultDir, "ycsbSummary.csv")
+    peSummaryFile = os.path.join(resultDir, "peSummary.csv")
+
+    ycsbHeader = ['Name', 'ExecutionTime', 'Type', 'Records', 'Runtime(ms)', 'Throughput(ops/sec)',
+                  'ReadOpsCount', 'ReadOps_AverageLatency(us)', 'InsertOpsCount','InsertOps_AverageLatency(us)',
+                  'UpdateOpsCount', 'UpdateOps_AverageLatency(us)']
+
+    peHeader = ['Name', 'RunDate', 'Type', 'Records','Total_Time']
+
+    with open(resultFilepath) as source:
+        with open(ycsbSummaryFile, FILE_FLAG_CREATE_IF_NOT_EXISTS) as ycsbFile, open(peSummaryFile, FILE_FLAG_CREATE_IF_NOT_EXISTS) as peFile:
+            ycsbWriter = csv.DictWriter(ycsbFile, delimiter=',', lineterminator='\n',fieldnames=ycsbHeader)
+            peWriter = csv.DictWriter(ycsbFile, delimiter=',', lineterminator='\n',fieldnames=peHeader)
+
+            #writing headers
+            ycsbWriter.writeheader()
+            peWriter.writeheader()
+
+            data = json.load(source)
+            testNames = data.keys()
+
+            for testName in testNames:
+                row = {}
+                row[NAME] = testName
+
+                if YCSB == data[testName][PARAMS][COMMAND]:
+                    row.update(getYCSBRow(data[testName]))
+                    ycsbWriter.writerow(row)
+                elif HBASE == data[testName][PARAMS][COMMAND]:
+                    row.update(getPERow(data[testName]))
+                    peWriter.writerow(row)
+                else:
+                    log(data[testName][PARAMS][COMMAND] + ' is not supported')
+
 
 # Main runner
 def main():
@@ -398,12 +536,12 @@ def main():
 
     log(testNames)
 
-    FILE_FLAG_CREATE_IF_NOT_EXISTS = "a+"
-    LOG_DIR = "logs"
-    RESULT_DIR = "results"
-    fileName = os.path.split(args.configFile)[1]
-    logFileName = os.path.join(LOG_DIR,fileName+str(time.time())+'.out')
-    resultFileName = os.path.join(RESULT_DIR,fileName+str(time.time())+'.json')
+    configFileName = os.path.split(args.configFile)[1]
+    testRunId = configFileName+str(time.time())
+    testResultDir = os.path.join(RESULT_DIR,testRunId)
+
+    logFileName = os.path.join(LOG_DIR,testRunId+'.out')
+    resultFileName = os.path.join(testResultDir,'result.json')
 
     outfile = createOpenFile(logFileName, FILE_FLAG_CREATE_IF_NOT_EXISTS)
     resultsFile = createOpenFile(resultFileName, FILE_FLAG_CREATE_IF_NOT_EXISTS)
@@ -412,6 +550,8 @@ def main():
     for testName in testNames:
         try:
             log('running test: '+testName)
+            executionTime = time.strftime("%Y-%m-%d %H:%M:%S")
+
             process = constructCommand(testRunConfig, testName)
             log('following process will run' + str(process))
             result = executeCommand(process)
@@ -424,13 +564,14 @@ def main():
 # Extracting results from output
             testResult = {}
             extractedResults = {}
-            if testRunConfig.get(testName, 'command') == 'ycsb':
+            if testRunConfig.get(testName, COMMAND) == YCSB:
                 extractedResults = extractYSCBResults(lines)
             elif testRunConfig.get(testName, 'tool') == 'pe':
                 extractedResults = extractPEResults(lines)
 
             testResult.update(extractedResults)
-            testResult['params'] = getTestRunParams(testRunConfig, testName)
+            testResult[EXECUTION_TIME] = executionTime
+            testResult[PARAMS] = getTestRunParams(testRunConfig, testName)
 
             results[testName] = testResult
             log('test completed:'+testName)
@@ -443,6 +584,9 @@ def main():
     json.dump(results, resultsFile)
     outfile.close()
     resultsFile.close()
+
+    copyHadoopConfigFiles(testResultDir)
+    createTabularSummary(resultFileName)
 
 if __name__ == '__main__':
     main()
