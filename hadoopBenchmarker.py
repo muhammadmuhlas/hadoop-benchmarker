@@ -6,6 +6,7 @@ import os
 import traceback
 import json
 import shutil
+import csv
 
 # constants
 FILE_FLAG_CREATE_IF_NOT_EXISTS = "a+"
@@ -17,7 +18,7 @@ PARAMS = 'params'
 COMMAND = 'command'
 YCSB = 'ycsb'
 HBASE = 'hbase'
-NAME = 'name'
+NAME = 'Name'
 SUMMARY = 'summary'
 OPERATIONS = 'operations'
 UPDATE = 'update'
@@ -433,9 +434,9 @@ def getYCSBRow(TestResult):
     Returns:
 
     """
-    TYPE = 'Type'
+    TYPE = 'TestType'
     RECORDS = 'Records'
-    RUNTIME = 'Runtime(ms)'
+    RUNTIME = 'RunTime(ms)'
     THROUGHPUT = 'Throughput(ops/sec)'
     READOPSCOUNT = 'ReadOpsCount'
     READOPS_AVERAGELATENCY = 'ReadOps_AverageLatency(us)'
@@ -452,6 +453,7 @@ def getYCSBRow(TestResult):
 
     if PARAMS in TestResult.keys():
         row[RECORDS] = TestResult[PARAMS]['recordcount']
+        row[TYPE] = TestResult[PARAMS]['tool']
 
     if EXECUTION_TIME in TestResult.keys():
         row[EXECUTION_TIME] = TestResult[EXECUTION_TIME]
@@ -492,11 +494,11 @@ def createTabularSummary(resultFilepath):
     ycsbSummaryFile = os.path.join(resultDir, "ycsbSummary.csv")
     peSummaryFile = os.path.join(resultDir, "peSummary.csv")
 
-    ycsbHeader = ['Name', 'ExecutionTime', 'Type', 'Records', 'Runtime(ms)', 'Throughput(ops/sec)',
+    ycsbHeader = ['Name', 'ExecutionTime', 'TestType', 'Records', 'RunTime(ms)', 'Throughput(ops/sec)',
                   'ReadOpsCount', 'ReadOps_AverageLatency(us)', 'InsertOpsCount','InsertOps_AverageLatency(us)',
                   'UpdateOpsCount', 'UpdateOps_AverageLatency(us)']
 
-    peHeader = ['Name', 'RunDate', 'Type', 'Records','Total_Time']
+    peHeader = ['Name', 'RunDate', 'TestType', 'Records','Total_Time']
 
     with open(resultFilepath) as source:
         with open(ycsbSummaryFile, FILE_FLAG_CREATE_IF_NOT_EXISTS) as ycsbFile, open(peSummaryFile, FILE_FLAG_CREATE_IF_NOT_EXISTS) as peFile:
