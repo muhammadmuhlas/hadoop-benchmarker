@@ -340,7 +340,7 @@ def extractPEResults(lines):
         if SUMMARY_KEY in line:
             data = line[line.index(SUMMARY_KEY):].split(":")
             key = data[0].strip()
-            values = data[0].strip()[1:-1].split(',')
+            values = data[1].strip()[1:-1].split(',')
             summary_results[key] = values
 
     if not summary_results:
@@ -503,7 +503,7 @@ def createTabularSummary(resultFilepath):
     with open(resultFilepath) as source:
         with open(ycsbSummaryFile, FILE_FLAG_CREATE_IF_NOT_EXISTS) as ycsbFile, open(peSummaryFile, FILE_FLAG_CREATE_IF_NOT_EXISTS) as peFile:
             ycsbWriter = csv.DictWriter(ycsbFile, delimiter=',', lineterminator='\n',fieldnames=ycsbHeader)
-            peWriter = csv.DictWriter(ycsbFile, delimiter=',', lineterminator='\n',fieldnames=peHeader)
+            peWriter = csv.DictWriter(peFile, delimiter=',', lineterminator='\n',fieldnames=peHeader)
 
             #writing headers
             ycsbWriter.writeheader()
