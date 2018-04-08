@@ -454,6 +454,8 @@ def getPERow(TestResult):
         else:
             row[RECORDS] = "1000000"
 
+    return row
+
 def getYCSBRow(TestResult):
     """
 
