@@ -538,7 +538,6 @@ def createTabularSummary(resultFilepath):
             peWriter.writeheader()
 
             testResults = json.load(source)
-            testNames = data.keys()
 
             for testResult in testResults:
                 row = {}
