@@ -7,6 +7,7 @@ import traceback
 import json
 import shutil
 import csv
+import numpy
 
 # constants
 FILE_FLAG_CREATE_IF_NOT_EXISTS = "a+"
@@ -24,6 +25,9 @@ OPERATIONS = 'operations'
 UPDATE = 'update'
 INSERT = 'insert'
 READ = 'read'
+TYPE = 'TestType'
+RECORDS = 'Records'
+
 
 
 
@@ -104,7 +108,7 @@ def getPeArguments(config, testName):
             if option == 'nClients':
                 commandArgs = config.get(testName, option)
                 continue
-            if option == 'testType':
+            if option == 'TestType':
                 peTestType = config.get(testName, option)
                 continue
             value = config.get(testName, option)
@@ -424,7 +428,32 @@ def copyHadoopConfigFiles(targetDir):
         shutil.copy(file, confDir)
 
 def getYCSBRow(TestResult):
-    pass
+    """
+    Args:
+    Returns:
+    """
+    AverageRuntime = "AverageRuntime(ms)"
+    paramRows = "--rows"
+
+    row = {EXECUTION_TIME: "", TYPE: "", RECORDS: "", AverageRuntime: ""}
+
+    if EXECUTION_TIME in TestResult.keys():
+        row[EXECUTION_TIME] = TestResult[EXECUTION_TIME]
+
+    if SUMMARY in TestResult.keys():
+        str_timings = TestResult[SUMMARY]['Summary of timings (ms)']
+        int_timinigs = map(lambda x: int(x), str_timings)
+        sum = reduce(lambda x,y: x+y, int_timinigs)
+
+        average = sum/float(len(int_timinigs))
+        row[AverageRuntime] = str(average)
+
+    if PARAMS in TestResult.keys():
+        row[TYPE] = TestResult[PARAMS][TYPE]
+        if paramRows in TestResult[PARAMS].keys():
+            row[RECORDS] = TestResult[PARAMS][paramRows]
+        else:
+            row[RECORDS] = "1000000"
 
 def getYCSBRow(TestResult):
     """
@@ -434,8 +463,6 @@ def getYCSBRow(TestResult):
     Returns:
 
     """
-    TYPE = 'TestType'
-    RECORDS = 'Records'
     RUNTIME = 'RunTime(ms)'
     THROUGHPUT = 'Throughput(ops/sec)'
     READOPSCOUNT = 'ReadOpsCount'
@@ -498,7 +525,7 @@ def createTabularSummary(resultFilepath):
                   'ReadOpsCount', 'ReadOps_AverageLatency(us)', 'InsertOpsCount','InsertOps_AverageLatency(us)',
                   'UpdateOpsCount', 'UpdateOps_AverageLatency(us)']
 
-    peHeader = ['Name', 'RunDate', 'TestType', 'Records','Total_Time']
+    peHeader = [NAME, EXECUTION_TIME, TYPE, RECORDS,'AverageRuntime(ms)']
 
     with open(resultFilepath) as source:
         with open(ycsbSummaryFile, FILE_FLAG_CREATE_IF_NOT_EXISTS) as ycsbFile, open(peSummaryFile, FILE_FLAG_CREATE_IF_NOT_EXISTS) as peFile:
