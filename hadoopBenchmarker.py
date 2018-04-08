@@ -345,6 +345,11 @@ def extractPEResults(lines):
             key = data[0].strip()
             values = data[1].strip()[1:-1].split(',')
             summary_results[key] = values
+            int_timinigs = map(lambda x: int(x), values)
+            sum = reduce(lambda x,y: x+y, int_timinigs)
+            average = sum/float(len(int_timinigs))
+            summary_results['AverageRuntime'] = average
+
 
     if not summary_results:
         summary_results['ERROR'] = "No results found, please see log files"
