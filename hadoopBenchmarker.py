@@ -7,7 +7,6 @@ import traceback
 import json
 import shutil
 import csv
-import numpy
 
 # constants
 FILE_FLAG_CREATE_IF_NOT_EXISTS = "a+"
