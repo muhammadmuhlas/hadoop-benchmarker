@@ -537,18 +537,18 @@ def createTabularSummary(resultFilepath):
             ycsbWriter.writeheader()
             peWriter.writeheader()
 
-            data = json.load(source)
+            testResults = json.load(source)
             testNames = data.keys()
 
-            for testName in testNames:
+            for testResult in testResults:
                 row = {}
-                row[NAME] = testName
+                row[NAME] = testResult[NAME]
 
                 if YCSB == data[testName][PARAMS][COMMAND]:
-                    row.update(getYCSBRow(data[testName]))
+                    row.update(getYCSBRow(testResult))
                     ycsbWriter.writerow(row)
                 elif HBASE == data[testName][PARAMS][COMMAND]:
-                    row.update(getPERow(data[testName]))
+                    row.update(getPERow(testResult))
                     peWriter.writerow(row)
                 else:
                     log(data[testName][PARAMS][COMMAND] + ' is not supported')
@@ -576,7 +576,7 @@ def main():
     outfile = createOpenFile(logFileName, FILE_FLAG_CREATE_IF_NOT_EXISTS)
     resultsFile = createOpenFile(resultFileName, FILE_FLAG_CREATE_IF_NOT_EXISTS)
 
-    results = {}
+    results = []
     for testName in testNames:
         try:
             log('running test: '+testName)
@@ -601,9 +601,10 @@ def main():
 
             testResult.update(extractedResults)
             testResult[EXECUTION_TIME] = executionTime
+            testResult[NAME] = testName
             testResult[PARAMS] = getTestRunParams(testRunConfig, testName)
 
-            results[testName] = testResult
+            results.append(testResult)
             log('test completed:'+testName)
         except Exception as exp:
             results[testName] = "ERROR: check log files"
