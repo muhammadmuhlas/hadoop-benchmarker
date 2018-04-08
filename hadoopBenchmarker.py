@@ -543,10 +543,10 @@ def createTabularSummary(resultFilepath):
                 row = {}
                 row[NAME] = testResult[NAME]
 
-                if YCSB == data[testName][PARAMS][COMMAND]:
+                if YCSB == testResult[PARAMS][COMMAND]:
                     row.update(getYCSBRow(testResult))
                     ycsbWriter.writerow(row)
-                elif HBASE == data[testName][PARAMS][COMMAND]:
+                elif HBASE == testResult[PARAMS][COMMAND]:
                     row.update(getPERow(testResult))
                     peWriter.writerow(row)
                 else:
