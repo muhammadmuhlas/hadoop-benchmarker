@@ -426,7 +426,7 @@ def copyHadoopConfigFiles(targetDir):
     for file in configFiles:
         shutil.copy(file, confDir)
 
-def getYCSBRow(TestResult):
+def getPERow(TestResult):
     """
     Args:
     Returns:
