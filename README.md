@@ -31,6 +31,7 @@ To define PE test, all `hbase pe` option can be used. Please make sure, you defi
 In addition to `hbase pe` parameters, following attributes must be defined in test file.
 - `command` for PE tests, the value of this attribute will be `hbase`
 - `tool` the value of this attribute will be `pe`
+- `--nomapred` is required as map reduce execution is not supported yet
 - `TestType` This attribute configures the test which `hbase pe` will execute. To find supported values, run `hbase pe` without any parameter. Some of the examples are `randomWrite`, `randomRead` etc.
 - `nClients` This attributes show number of threads participating in `hbase pe` execution.
 
