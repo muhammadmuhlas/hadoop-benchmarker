@@ -7,6 +7,7 @@ import traceback
 import json
 import shutil
 import csv
+import shlex
 
 # constants
 FILE_FLAG_CREATE_IF_NOT_EXISTS = "a+"
@@ -26,8 +27,11 @@ INSERT = 'insert'
 READ = 'read'
 TYPE = 'TestType'
 RECORDS = 'Records'
+APP_CONFIG = 'APP_CONFIG'
 
 
+# global object
+appCfg = None
 
 
 
@@ -557,6 +561,38 @@ def createTabularSummary(resultFilepath):
                 else:
                     log(data[testName][PARAMS][COMMAND] + ' is not supported')
 
+def copyHbaseServerConfig(testResultDir):
+    """
+    """
+
+def copyResultsToHdfs(testResultDir):
+    """ It upload result folder to HDFS directory.
+
+    """
+    command = []
+    command.append('hdfs')
+    command.append('dfs')
+    command.append('-copyFromLocal')
+    command.append('-f')
+    command.append(testResultDir)
+    command.append(appCfg.get(APP_CONFIG,'hdfs_location'))
+
+    executeCommand(command)
+
+def createHbaseTable(config):
+    table_name = config.defaults().get('table')
+    column_family = config.defaults().get('columnfamily')
+    splits = config.defaults().get('splits')
+
+    command = "create '"+ table_name +"', '"+ column_family +"', {SPLITS => (1.."+splits+").map {|i| \"user#{1000+i*(9999-1000)/"+splits+"}\"}}"
+    executeCommand(shlex.split(command))
+
+def saveServerSideConfig(resultDir, rsUrl):
+    outputFile = os.path.join(resultDir, 'resourceManagerConfig.xml')
+
+    command = "curl --negotiate -o "+ outputFile + " " + rsUrl
+
+    executeCommand(shlex.split(command))
 
 # Main runner
 def main():
@@ -565,13 +601,14 @@ def main():
     args = argParser.parse_args()
     log('configFile='+args.configFile)
     testRunConfig = loadConfiguration(args.configFile)
+    appCfg = loadConfiguration(os.path.join('conf','application.cfg'))
 
     testNames = testRunConfig.sections()
 
     log(testNames)
 
     configFileName = os.path.split(args.configFile)[1]
-    testRunId = configFileName+str(time.time())
+    testRunId = configFileName+time.strftime("%Y%m%d%H%M%S", time.gmtime())
     testResultDir = os.path.join(RESULT_DIR,testRunId)
 
     logFileName = os.path.join(LOG_DIR,testRunId+'.out')
@@ -579,6 +616,8 @@ def main():
 
     outfile = createOpenFile(logFileName, FILE_FLAG_CREATE_IF_NOT_EXISTS)
     resultsFile = createOpenFile(resultFileName, FILE_FLAG_CREATE_IF_NOT_EXISTS)
+
+    createHbaseTable(testRunConfig)
 
     results = []
     for testName in testNames:
@@ -621,7 +660,10 @@ def main():
     resultsFile.close()
 
     copyHadoopConfigFiles(testResultDir)
-    createTabularSummary(resultFileName)
+    copyHbaseServerConfig(testResultDir)
+    copyResultsToHdfs(testResultDir)
+#    createTabularSummary(resultFileName)
+
 
 if __name__ == '__main__':
     main()
