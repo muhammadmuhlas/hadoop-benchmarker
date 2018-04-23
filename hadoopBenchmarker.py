@@ -8,7 +8,7 @@ import json
 import shutil
 import csv
 import shlex
-
+import sys
 # constants
 FILE_FLAG_CREATE_IF_NOT_EXISTS = "a+"
 LOG_DIR = "/tmp/logs"
@@ -73,6 +73,7 @@ def executeCommand(process):
     Returns:
             result tuple: a tuple which contains the console output. All the output is redirected to stdout for simplicity
     """
+    log("Command:"+str(process))
     p = subprocess.Popen(process, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     result = p.communicate()
     return result
@@ -575,6 +576,7 @@ def copyResultsToHdfs(testResultDir):
     command.append('-copyFromLocal')
     command.append('-f')
     command.append(testResultDir)
+    print type(appCfg)
     command.append(appCfg.get(APP_CONFIG,'hdfs_location'))
 
     executeCommand(command)
@@ -583,8 +585,19 @@ def createHbaseTable(config):
     table_name = config.defaults().get('table')
     column_family = config.defaults().get('columnfamily')
     splits = config.defaults().get('splits')
+    create_table_statement = "create '"+table_name+"', '"+column_family+"'"
+    if splits:
+        splits_section = "{SPLITS => (1.."+splits+").map {|i| \"user#{1000+i*(9999-1000)/"+splits+"}\"}}"
+        create_table_statement += ", "+splits_section  
+    if not os.path.exists('/tmp/ycsb_hbase_table_create.ql'):
+        with open('/tmp/ycsb_hbase_table_create.ql', 'w') as schemaFile:
+            schemaFile.write("disable '"+table_name+"'\n")
+            schemaFile.write("drop '"+table_name+"'\n")
+            schemaFile.write(create_table_statement+"\n")
+            schemaFile.write("exit")
+  
 
-    command = "create '"+ table_name +"', '"+ column_family +"', {SPLITS => (1.."+splits+").map {|i| \"user#{1000+i*(9999-1000)/"+splits+"}\"}}"
+    command = "hbase shell /tmp/ycsb_hbase_table_create.ql"
     executeCommand(shlex.split(command))
 
 def saveServerSideConfig(resultDir, rsUrl):
@@ -601,8 +614,8 @@ def main():
     args = argParser.parse_args()
     log('configFile='+args.configFile)
     testRunConfig = loadConfiguration(args.configFile)
+    global appCfg
     appCfg = loadConfiguration(os.path.join('conf','application.cfg'))
-
     testNames = testRunConfig.sections()
 
     log(testNames)
