@@ -588,14 +588,13 @@ def createHbaseTable(config):
     create_table_statement = "create '"+table_name+"', '"+column_family+"'"
     if splits:
         splits_section = "{SPLITS => (1.."+splits+").map {|i| \"user#{1000+i*(9999-1000)/"+splits+"}\"}}"
-        create_table_statement += ", "+splits_section  
-    if not os.path.exists('/tmp/ycsb_hbase_table_create.ql'):
-        with open('/tmp/ycsb_hbase_table_create.ql', 'w') as schemaFile:
-            schemaFile.write("disable '"+table_name+"'\n")
-            schemaFile.write("drop '"+table_name+"'\n")
-            schemaFile.write(create_table_statement+"\n")
-            schemaFile.write("exit")
-  
+        create_table_statement += ", "+splits_section
+    with open('/tmp/ycsb_hbase_table_create.ql', 'w') as schemaFile:
+        schemaFile.write("disable '"+table_name+"'\n")
+        schemaFile.write("drop '"+table_name+"'\n")
+        schemaFile.write(create_table_statement+"\n")
+        schemaFile.write("exit")
+
 
     command = "hbase shell /tmp/ycsb_hbase_table_create.ql"
     executeCommand(shlex.split(command))
