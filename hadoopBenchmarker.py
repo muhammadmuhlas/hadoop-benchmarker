@@ -331,9 +331,9 @@ def getLatencyRecord(line):
     for mat in matrics:
         stripMatric = mat.strip()
         if "/" in stripMatric:
-            latency[datarange] = stripMatric
+            latency['datarange'] = stripMatric
         else:
-            pair = stripMatics.split("=")
+            pair = stripMatric.split("=")
             latency[pair[0]] = pair[1]
     return latency
 
@@ -674,7 +674,7 @@ def main():
             results.append(testResult)
             log('test completed:'+testName)
         except Exception as exp:
-            results[testName] = "ERROR: check log files"
+            results.append("ERROR: check log files")
             print 'Test: '+testName +' is failed ', exp
             traceback.print_exc()
 
@@ -684,8 +684,9 @@ def main():
     resultsFile.close()
 
     copyHadoopConfigFiles(testResultDir)
-    if appCfg.defaults.get('hbase_conf_url').strip():
-        saveServerSideConfig(testResultDir, appCfg.defaults.get('hbase_conf_url'))
+    hbaseConfUrl = appCfg.get(APP_CONFIG, 'hbase_conf_url')
+    if hbaseConfUrl:
+        saveServerSideConfig(testResultDir, hbaseConfUrl)
     copyResultsToHdfs(testResultDir)
 #    createTabularSummary(resultFileName)
 
