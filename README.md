@@ -22,6 +22,10 @@ Once test configuration file is created, the tests can be invoked by executing `
 ## Output Schema
 `hadoop-benchmarker` application parses the console output of standards tools, hence the json structure is different for different type of tests. There are some common sections e.g. `params` section contains the parameter supplied in test configuration file for each test.
 
+## Kerberos cluster
+In Kerberos clusters, please create kerberos ticket using `kinit` before running `hadoop-benchmarker`
+
+
 ## Hbase Performance Evaluation Tool
 Hbase provides several tools to admin, analyze or monitor your cluster. `hbase pe` is part of builtin tool which helps to measure the performance of the cluster. Please run `hbase pe` in your cluster or visit http://hbase.apache.org/book.html#__code_hbase_pe_code to find more about hbase performance evaluation test.
 
