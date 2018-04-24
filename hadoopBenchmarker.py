@@ -319,14 +319,24 @@ def log(message):
     """
     print message
 
-# def recordPeLatency(lines, summaryFile):
-#     searchKeys = ['Min', 'Avg', 'StdDev', '50th', '75th', '95th', '99th', '99.9th', '99.99th', '99.999th', 'Max']
-#     latency = {}
-#     for key in searchKeys:
-#         line = next(lines)
-#         summaryFile.write(line[line.index(key):]+'\n')
-#         latency[key] = line[line.index(key):]
-#     return latency
+
+def getLatencyRecord(line):
+    """
+    """
+    tmp = "hbase.PerformanceEvaluation:"
+    matricsRaw = line[line.index(tmp)+len(tmp):]
+    matrics = matricsRaw.split(",")
+    latency = {}
+
+    for mat in matrics:
+        stripMatric = mat.strip()
+        if "/" in stripMatric:
+            latency[datarange] = stripMatric
+        else:
+            pair = stripMatics.split("=")
+            latency[pair[0]] = pair[1]
+    return latency
+
 
 def extractPEResults(lines):
     """It scans through the console output of `hbase pe` tool and extracts the outcome
@@ -342,6 +352,7 @@ def extractPEResults(lines):
 
     pe_results = {}
     SUMMARY_KEY = "Summary of timings"
+    LATENCY_KEY = ", latency mean="
     summary_results = {}
     latency_results = []
     for line in lines:
@@ -354,7 +365,8 @@ def extractPEResults(lines):
             sum = reduce(lambda x,y: x+y, int_timinigs)
             average = sum/float(len(int_timinigs))
             summary_results['AverageRuntime'] = average
-
+        if LATENCY_KEY in line:
+            latency_results.append(getLatencyRecord(line))
 
     if not summary_results:
         summary_results['ERROR'] = "No results found, please see log files"
@@ -562,9 +574,6 @@ def createTabularSummary(resultFilepath):
                 else:
                     log(data[testName][PARAMS][COMMAND] + ' is not supported')
 
-def copyHbaseServerConfig(testResultDir):
-    """
-    """
 
 def copyResultsToHdfs(testResultDir):
     """ It upload result folder to HDFS directory.
@@ -629,7 +638,10 @@ def main():
     outfile = createOpenFile(logFileName, FILE_FLAG_CREATE_IF_NOT_EXISTS)
     resultsFile = createOpenFile(resultFileName, FILE_FLAG_CREATE_IF_NOT_EXISTS)
 
-    createHbaseTable(testRunConfig)
+    table_name = testRunConfig.defaults().get('table')
+    command = testRunConfig.defaults().get('command')
+    if command == YCSB and table_name:
+        createHbaseTable(testRunConfig)
 
     results = []
     for testName in testNames:
@@ -672,7 +684,8 @@ def main():
     resultsFile.close()
 
     copyHadoopConfigFiles(testResultDir)
-    copyHbaseServerConfig(testResultDir)
+    if appCfg.defaults.get('hbase_conf_url').strip():
+        saveServerSideConfig(testResultDir, appCfg.defaults.get('hbase_conf_url'))
     copyResultsToHdfs(testResultDir)
 #    createTabularSummary(resultFileName)
 
