@@ -10,6 +10,9 @@
 `hadoop-benchmarker` is a python application, hence it requires python to be installed on machine. Although it has been tested with python 2.7 but it should work with other version of python too.
 As `hadoop-benchmarker` is a wrapper around standard tools. Please make sure standard tool can be run independently successfully.
 
+## Installation
+Download `hadoop-benchmarker` to a directory from where you want to execute your tests. e.g. `/opt`
+
 ## Test Definition
 Tests are configured in INI formatted file [https://en.wikipedia.org/wiki/INI_file]. Each test file can contain test(s) which gets executed. Please see tool specific section to write test definitions.
 
