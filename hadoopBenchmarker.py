@@ -19,6 +19,7 @@ PARAMS = 'params'
 COMMAND = 'command'
 YCSB = 'ycsb'
 HBASE = 'hbase'
+HADOOP = 'hadoop'
 NAME = 'Name'
 SUMMARY = 'summary'
 OPERATIONS = 'operations'
@@ -252,6 +253,67 @@ def getYCSBArguments(config, testName):
     return args
 
 
+def getTestDfsioArguments(config, testName):
+    """This reads `config` for given `testName` and construct a TestDFSIO command to
+    execute.
+    Args:
+        config obj: obj contains the configuration for this run.
+        testName (str): The section name in config file.
+    Returns:
+        a list consists of all the parts of `TestDFSIO` test
+    """
+    DFSIOARGS = {
+    'JAR_FILE_PATH': 'jarFilePath',
+    'JAR_CLASS': 'jarClass',
+    'TEST_TYPE': 'testType',
+    'NUMBER_FILES': 'numberFiles',
+    'FILE_SIZE': 'fileSize',
+    'TEST_PROPERTIES': 'testProperties'
+    }
+
+    jarFilePath = ''
+    jarClass = ''
+    testType = ''
+    numberFiles = ''
+    fileSize = ''
+    testProperties = ''
+
+    options = config.options(testName)
+    for option in options:
+        if option == DFSIOARGS['JAR_FILE_PATH']:
+            jarFilePath = config.get(testName, option)
+        elif option == DFSIOARGS['JAR_CLASS']:
+            jarClass = config.get(testName, option)
+        elif option == DFSIOARGS['TEST_TYPE']:
+            testType = config.get(testName, option)
+        elif option == DFSIOARGS['NUMBER_FILES']:
+            numberFiles = config.get(testName, option)
+        elif option == DFSIOARGS['FILE_SIZE']:
+            fileSize = config.get(testName, option)
+        elif option == DFSIOARGS['TEST_PROPERTIES']:
+            testProperties = config.get(testName, option)
+        else:
+            raise Exception(option + ' in '+ testName +' is not implemented yet...')
+
+    args = []
+    args.append(HADOOP)
+    args.append('jar')
+    args.append(jarFilePath)
+    args.append(jarClass)
+
+    props = testProperties.split(',')
+
+    for prop in props:
+        args.append('-D')
+        args.append(prop)
+
+    args.append('-'+testType)
+    args.append('-nrFiles')
+    args.append(numberFiles)
+    args.append('-fileSize')
+    args.append(fileSize)
+
+    return args
 
 #This function validates the commands and tools and raise an error, command
 # and tool are not in allowed list
@@ -267,21 +329,23 @@ def constructCommand(config, testName):
 
     """
     process = []
-    allowedCommands = ['hbase', 'ycsb']
-    allowedTools = ['pe', 'load', 'run']
-    command = config.get(testName, 'command')
+    allowedCommands = [HADOOP, HBASE, YCSB]
+    allowedTools = ['jar', 'pe', 'load', 'run']
+    command = config.get(testName, COMMAND)
     if command not in allowedCommands:
         raise Exception('command: '+command + ' is not supported')
     tool = config.get(testName, 'tool')
     if tool not in allowedTools:
         raise Exception('tool: '+tool + ' is not supported')
 
-    if (command == 'hbase') and (tool == 'pe'):
+    if (command == HBASE) and (tool == 'pe'):
         process.append(command)
         process.append(tool)
         process.extend(getPeArguments(config, testName))
-    elif command == 'ycsb':
+    elif command == YCSB:
         process = getYCSBArguments(config, testName)
+    elif command == HADOOP:
+        process = getTestDfsioArguments(config, testName)
 
     return process
 
@@ -319,6 +383,45 @@ def log(message):
     """
     print message
 
+def addResult(results, key, line):
+    data = line[line.index(key):].split(":")
+    key = data[0].strip()
+    value = data[1].strip()
+    results[key] = value
+
+
+def extractDFSIOResults(lines):
+    """It scans through the console output of `hadoop jar TestDFSIO` tool and extracts the outcome
+    of the the run.
+
+    Args:
+        lines: list of console output lines
+
+    Returns:
+           dict: It returns dictionary containing
+           a section from the `hadoop jar TestDFSIO` output.
+    """
+
+    dfsio_results = {}
+    TOTAL_MBYTES_PROCESSED_KEY = "Total MBytes processed"
+    THROUGHPUT_KEY = "Throughput mb/sec"
+    AVERAGE_IO_KEY = "Average IO rate mb/sec"
+    IO_RATE_STD_DEVIATION_KEY = "IO rate std deviation"
+    TEST_EXEC_TIME_KEY = "Test exec time sec"
+
+    for line in lines:
+        if TOTAL_MBYTES_PROCESSED_KEY in line:
+            addResult(dfsio_results, TOTAL_MBYTES_PROCESSED_KEY, line)
+        if THROUGHPUT_KEY in line:
+            addResult(dfsio_results, THROUGHPUT_KEY, line)
+        if AVERAGE_IO_KEY in line:
+            addResult(dfsio_results, AVERAGE_IO_KEY, line)
+        if IO_RATE_STD_DEVIATION_KEY in line:
+            addResult(dfsio_results, IO_RATE_STD_DEVIATION_KEY, line)
+        if TEST_EXEC_TIME_KEY in line:
+            addResult(dfsio_results, TEST_EXEC_TIME_KEY, line)
+
+    return dfsio_results
 
 def getLatencyRecord(line):
     """
@@ -629,7 +732,7 @@ def main():
     log(testNames)
 
     configFileName = os.path.split(args.configFile)[1]
-    testRunId = configFileName+time.strftime("%Y%m%d%H%M%S", time.gmtime())
+    testRunId = configFileName+time.strftime("%Y%m%dT%H%M%S", time.localtime())
     testResultDir = os.path.join(RESULT_DIR,testRunId)
 
     logFileName = os.path.join(LOG_DIR,testRunId+'.out')
@@ -647,7 +750,7 @@ def main():
     for testName in testNames:
         try:
             log('running test: '+testName)
-            executionTime = time.strftime("%Y-%m-%d %H:%M:%S")
+            executionTime = time.strftime("%Y-%m-%dT%H:%M:%S")
 
             process = constructCommand(testRunConfig, testName)
             log('following process will run' + str(process))
@@ -665,6 +768,8 @@ def main():
                 extractedResults = extractYSCBResults(lines)
             elif testRunConfig.get(testName, 'tool') == 'pe':
                 extractedResults = extractPEResults(lines)
+            elif testRunConfig.get(testName, COMMAND) == HADOOP:
+                extractedResults = extractDFSIOResults(lines)
 
             testResult.update(extractedResults)
             testResult[EXECUTION_TIME] = executionTime
