@@ -292,8 +292,8 @@ def getTestDfsioArguments(config, testName):
             fileSize = config.get(testName, option)
         elif option == DFSIOARGS['TEST_PROPERTIES']:
             testProperties = config.get(testName, option)
-        else:
-            raise Exception(option + ' in '+ testName +' is not implemented yet...')
+        # else:
+        #     raise Exception(option + ' in '+ testName +' is not implemented yet...')
 
     args = []
     args.append(HADOOP)
