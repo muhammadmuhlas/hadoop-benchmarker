@@ -322,47 +322,46 @@ def getNNBenchArguments(config, testName):
         elif option == NNBENCHARGS['READ_FILE_AFTER_OPEN']:
             readFileAfterOpen = optionValue
 
+    args = []
+    args.append(HADOOP)
+    args.append('jar')
+    args.append(jarFilePath)
+    args.append(jarClass)
 
-        args = []
-        args.append(HADOOP)
-        args.append('jar')
-        args.append(jarFilePath)
-        args.append(jarClass)
+    args.append('-operation')
+    args.append(operation)
+    if maps:
+        args.append('-maps')
+        args.append(maps)
+    if reduces:
+        args.append('-reduces')
+        args.append(reduces)
+    if startTime:
+        args.append('-startTime')
+        args.append(startTime)
+    if blockSize:
+        args.append('-blockSize')
+        args.append(blockSize)
+    if bytesToWrite:
+        args.append('-bytesToWrite')
+        args.append(bytesToWrite)
+    if bytesPerChecksum:
+        args.append('-bytesPerChecksum')
+        args.append(bytesPerChecksum)
+    if numberOfFiles:
+        args.append('-numberOfFiles')
+        args.append(numberOfFiles)
+    if replicationFactorPerFile:
+        args.append('-replicationFactorPerFile')
+        args.append(replicationFactorPerFile)
+    if baseDir:
+        args.append('-baseDir')
+        args.append(baseDir)
+    if readFileAfterOpen:
+        args.append('-readFileAfterOpen')
+        args.append(readFileAfterOpen)
 
-        args.append('-operation')
-        args.append(operation)
-        if maps:
-            args.append('-maps')
-            args.append(maps)
-        if reduces:
-            args.append('-reduces')
-            args.append(reduces)
-        if startTime:
-            args.append('-startTime')
-            args.append(startTime)
-        if blockSize:
-            args.append('-blockSize')
-            args.append(blockSize)
-        if bytesToWrite:
-            args.append('-bytesToWrite')
-            args.append(bytesToWrite)
-        if bytesPerChecksum:
-            args.append('-bytesPerChecksum')
-            args.append(bytesPerChecksum)
-        if numberOfFiles:
-            args.append('-numberOfFiles')
-            args.append(numberOfFiles)
-        if replicationFactorPerFile:
-            args.append('-replicationFactorPerFile')
-            args.append(replicationFactorPerFile)
-        if baseDir:
-            args.append('-baseDir')
-            args.append(baseDir)
-        if readFileAfterOpen:
-            args.append('-readFileAfterOpen')
-            args.append(readFileAfterOpen)
-
-        return args
+    return args
 
 
 def getTestDfsioArguments(config, testName):
