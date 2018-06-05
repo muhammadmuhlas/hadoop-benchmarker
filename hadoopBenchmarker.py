@@ -291,7 +291,7 @@ def getNNBenchArguments(config, testName):
     baseDir = ''
     readFileAfterOpen = ''
 
-        options = config.options(testName)
+    options = config.options(testName)
         for option in options:
             optionValue = config.get(testName, option)
             if option == NNBENCHARGS['JAR_FILE_PATH']:
