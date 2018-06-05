@@ -454,9 +454,9 @@ def constructCommand(config, testName):
         process.extend(getPeArguments(config, testName))
     elif command == YCSB:
         process = getYCSBArguments(config, testName)
-    elif command == HADOOP and testRunConfig.get(testName, JAR_CLASS) == 'TestDFSIO':
+    elif command == HADOOP and config.get(testName, JAR_CLASS) == 'TestDFSIO':
         process = getTestDfsioArguments(config, testName)
-    elif command == HADOOP and testRunConfig.get(testName, JAR_CLASS) == 'nnbench':
+    elif command == HADOOP and config.get(testName, JAR_CLASS) == 'nnbench':
         process = getNNBenchArguments(config, testName)
 
     return process
