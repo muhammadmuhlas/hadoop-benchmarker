@@ -271,7 +271,7 @@ def getNNBenchArguments(config, testName):
     'START_TIME': 'starttime',
     'BLOCK_SIZE': 'blockSize',
     'BYTES_TO_WRITE': 'bytesToWrite',
-    'BYTES_PER_CHECKSUM': 'bytesPerChecksum'
+    'BYTES_PER_CHECKSUM': 'bytesPerChecksum',
     'NUMBER_FILES': 'numberOfFiles',
     'REPLICATION_FACTOR_PER_FILE': 'replicationFactorPerFile',
     'BASE_DIR': 'baseDir',
