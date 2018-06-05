@@ -292,34 +292,35 @@ def getNNBenchArguments(config, testName):
     readFileAfterOpen = ''
 
     options = config.options(testName)
-        for option in options:
-            optionValue = config.get(testName, option)
-            if option == NNBENCHARGS['JAR_FILE_PATH']:
-                jarFilePath = optionValue
-            elif option == NNBENCHARGS['JAR_CLASS']:
-                jarClass = optionValue
-            elif option == NNBENCHARGS['OPERATION']:
-                operation = optionValue
-            elif option == NNBENCHARGS['MAPS']:
-                maps = optionValue
-            elif option == NNBENCHARGS['REDUCES']:
-                reduces = optionValue
-            elif option == NNBENCHARGS['START_TIME']:
-                startTime = optionValue
-            elif option == NNBENCHARGS['BLOCK_SIZE']:
-                blockSize = optionValue
-            elif option == NNBENCHARGS['BYTES_TO_WRITE']:
-                bytesToWrite = optionValue
-            elif option == NNBENCHARGS['BYTES_PER_CHECKSUM']:
-                bytesPerChecksum = optionValue
-            elif option == NNBENCHARGS['NUMBER_FILES']:
-                numberOfFiles = optionValue
-            elif option == NNBENCHARGS['REPLICATION_FACTOR_PER_FILE']:
-                replicationFactorPerFile = optionValue
-            elif option == NNBENCHARGS['BASE_DIR']:
-                baseDir = optionValue
-            elif option == NNBENCHARGS['READ_FILE_AFTER_OPEN']:
-                readFileAfterOpen = optionValue
+
+    for option in options:
+        optionValue = config.get(testName, option)
+        if option == NNBENCHARGS['JAR_FILE_PATH']:
+            jarFilePath = optionValue
+        elif option == NNBENCHARGS['JAR_CLASS']:
+            jarClass = optionValue
+        elif option == NNBENCHARGS['OPERATION']:
+            operation = optionValue
+        elif option == NNBENCHARGS['MAPS']:
+            maps = optionValue
+        elif option == NNBENCHARGS['REDUCES']:
+            reduces = optionValue
+        elif option == NNBENCHARGS['START_TIME']:
+            startTime = optionValue
+        elif option == NNBENCHARGS['BLOCK_SIZE']:
+            blockSize = optionValue
+        elif option == NNBENCHARGS['BYTES_TO_WRITE']:
+            bytesToWrite = optionValue
+        elif option == NNBENCHARGS['BYTES_PER_CHECKSUM']:
+            bytesPerChecksum = optionValue
+        elif option == NNBENCHARGS['NUMBER_FILES']:
+            numberOfFiles = optionValue
+        elif option == NNBENCHARGS['REPLICATION_FACTOR_PER_FILE']:
+            replicationFactorPerFile = optionValue
+        elif option == NNBENCHARGS['BASE_DIR']:
+            baseDir = optionValue
+        elif option == NNBENCHARGS['READ_FILE_AFTER_OPEN']:
+            readFileAfterOpen = optionValue
 
 
         args = []
