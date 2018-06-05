@@ -55,8 +55,8 @@ def main():
     columnKeys = schemaFile.readline().strip().split(',')
     print columnKeys
     schemaFile.close()
-
-    with open("jsonTocsv.csv", 'a') as result, open(args.datajsonFile, 'r') as jsonFile:
+    outputFile = os.path.split(args.datajsonFile)[1]+'.csv'
+    with open(outputFile, 'a') as result, open(args.datajsonFile, 'r') as jsonFile:
         csvWriter = csv.DictWriter(result, delimiter=',', lineterminator='\n',fieldnames=columnNames)
         csvWriter.writeheader()
         jsonData = json.load(jsonFile)

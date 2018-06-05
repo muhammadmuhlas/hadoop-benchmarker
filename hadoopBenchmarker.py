@@ -29,6 +29,7 @@ READ = 'read'
 TYPE = 'TestType'
 RECORDS = 'Records'
 APP_CONFIG = 'APP_CONFIG'
+JAR_CLASS = 'jarClass'
 
 
 # global object
@@ -252,6 +253,116 @@ def getYCSBArguments(config, testName):
 
     return args
 
+def getNNBenchArguments(config, testName):
+    """This reads `config` for given `testName` and construct a nnbench command to
+    execute.
+    Args:
+        config obj: obj contains the configuration for this run.
+        testName (str): The section name in config file.
+    Returns:
+        a list consists of all the parts of `nnbench` test
+    """
+    NNBENCHARGS = {
+    'JAR_FILE_PATH': 'jarFilePath',
+    'JAR_CLASS': 'jarClass',
+    'OPERATION': 'operation',
+    'MAPS': 'maps',
+    'REDUCES': 'reduces',
+    'START_TIME': 'starttime',
+    'BLOCK_SIZE': 'blockSize',
+    'BYTES_TO_WRITE': 'bytesToWrite',
+    'BYTES_PER_CHECKSUM': 'bytesPerChecksum'
+    'NUMBER_FILES': 'numberOfFiles',
+    'REPLICATION_FACTOR_PER_FILE': 'replicationFactorPerFile',
+    'BASE_DIR': 'baseDir',
+    'READ_FILE_AFTER_OPEN': 'readFileAfterOpen'
+    }
+    jarFilePath = ''
+    jarClass = ''
+    operation = ''
+    maps = ''
+    reduces = ''
+    startTime = ''
+    blockSize = ''
+    bytesToWrite = ''
+    bytesPerChecksum = ''
+    numberOfFiles = ''
+    replicationFactorPerFile = ''
+    baseDir = ''
+    readFileAfterOpen = ''
+
+        options = config.options(testName)
+        for option in options:
+            optionValue = config.get(testName, option)
+            if option == NNBENCHARGS['JAR_FILE_PATH']:
+                jarFilePath = optionValue
+            elif option == NNBENCHARGS['JAR_CLASS']:
+                jarClass = optionValue
+            elif option == NNBENCHARGS['OPERATION']:
+                operation = optionValue
+            elif option == NNBENCHARGS['MAPS']:
+                maps = optionValue
+            elif option == NNBENCHARGS['REDUCES']:
+                reduces = optionValue
+            elif option == NNBENCHARGS['START_TIME']:
+                startTime = optionValue
+            elif option == NNBENCHARGS['BLOCK_SIZE']:
+                blockSize = optionValue
+            elif option == NNBENCHARGS['BYTES_TO_WRITE']:
+                bytesToWrite = optionValue
+            elif option == NNBENCHARGS['BYTES_PER_CHECKSUM']:
+                bytesPerChecksum = optionValue
+            elif option == NNBENCHARGS['NUMBER_FILES']:
+                numberOfFiles = optionValue
+            elif option == NNBENCHARGS['REPLICATION_FACTOR_PER_FILE']:
+                replicationFactorPerFile = optionValue
+            elif option == NNBENCHARGS['BASE_DIR']:
+                baseDir = optionValue
+            elif option == NNBENCHARGS['READ_FILE_AFTER_OPEN']:
+                readFileAfterOpen = optionValue
+
+
+        args = []
+        args.append(HADOOP)
+        args.append('jar')
+        args.append(jarFilePath)
+        args.append(jarClass)
+
+        args.append('-operation')
+        args.append(operation)
+        if maps:
+            args.append('-maps')
+            args.append(maps)
+        if reduces:
+            args.append('-reduces')
+            args.append(reduces)
+        if startTime:
+            args.append('-startTime')
+            args.append(startTime)
+        if blockSize:
+            args.append('-blockSize')
+            args.append(blockSize)
+        if bytesToWrite:
+            args.append('-bytesToWrite')
+            args.append(bytesToWrite)
+        if bytesPerChecksum:
+            args.append('-bytesPerChecksum')
+            args.append(bytesPerChecksum)
+        if numberOfFiles:
+            args.append('-numberOfFiles')
+            args.append(numberOfFiles)
+        if replicationFactorPerFile:
+            args.append('-replicationFactorPerFile')
+            args.append(replicationFactorPerFile)
+        if baseDir:
+            args.append('-baseDir')
+            args.append(baseDir)
+        if readFileAfterOpen:
+            args.append('-readFileAfterOpen')
+            args.append(readFileAfterOpen)
+
+        return args
+
 
 def getTestDfsioArguments(config, testName):
     """This reads `config` for given `testName` and construct a TestDFSIO command to
@@ -344,8 +455,10 @@ def constructCommand(config, testName):
         process.extend(getPeArguments(config, testName))
     elif command == YCSB:
         process = getYCSBArguments(config, testName)
-    elif command == HADOOP:
+    elif command == HADOOP and testRunConfig.get(testName, JAR_CLASS) == 'TestDFSIO':
         process = getTestDfsioArguments(config, testName)
+    elif command == HADOOP and testRunConfig.get(testName, JAR_CLASS) == 'nnbench':
+        process = getNNBenchArguments(config, testName)
 
     return process
 
@@ -384,11 +497,61 @@ def log(message):
     print message
 
 def addResult(results, key, line):
-    data = line[line.index(key):].split(":")
+    data = line[line.index(key):].rsplit(":",1)
     key = data[0].strip()
     value = data[1].strip()
     results[key] = value
 
+
+def extractNNBenchResults(lines):
+    """It scans through the console output of `hadoop jar nnbench` tool and extracts the outcome
+    of the the run.
+
+    Args:
+        lines: list of console output lines
+
+    Returns:
+           dict: It returns dictionary containing
+           a section from the `hadoop jar nnbench` output.
+    """
+    nnbench_results = {}
+    SUCCESSFUL_FILE_OPS = "Successful file operations"
+    MAPS_MISSED_BARRIER = "maps that missed the barrier"
+    TPS_OPEN_READ = "TPS: Open/Read"
+    AVG_EXEC_TIME_OPEN_READ = "Avg Exec time (ms): Open/Read"
+    AVG_LAT_OPEN = "Avg Lat (ms): Open"
+    RAW_DATA_AL_TOTAL_1 = "RAW DATA: AL Total #1"
+    RAW_DATA_AL_TOTAL_2 = "RAW DATA: AL Total #2"
+    RAW_DATA_TPS_TOTAL = "RAW DATA: TPS Total (ms)"
+    RAW_DATA_LONGEST_MAP_TIME = "RAW DATA: Longest Map Time (ms)"
+    RAW_DATA_LATE_MAPS = "RAW DATA: Late maps"
+    RAW_DATA_EXCEPTIONS = "RAW DATA: # of exceptions"
+
+    for line in lines:
+        if SUCCESSFUL_FILE_OPS in line:
+            addResult(nnbench_results, SUCCESSFUL_FILE_OPS, line)
+        if MAPS_MISSED_BARRIER in line:
+            addResult(nnbench_results, MAPS_MISSED_BARRIER, line)
+        if TPS_OPEN_READ in line:
+            addResult(nnbench_results, TPS_OPEN_READ, line)
+        if AVG_EXEC_TIME_OPEN_READ in line:
+            addResult(nnbench_results, AVG_EXEC_TIME_OPEN_READ, line)
+        if AVG_LAT_OPEN in line:
+            addResult(nnbench_results, AVG_LAT_OPEN, line)
+        if RAW_DATA_AL_TOTAL_1 in line:
+            addResult(nnbench_results, RAW_DATA_AL_TOTAL_1, line)
+        if RAW_DATA_AL_TOTAL_2 in line:
+            addResult(nnbench_results, RAW_DATA_AL_TOTAL_2, line)
+        if RAW_DATA_TPS_TOTAL in line:
+            addResult(nnbench_results, RAW_DATA_TPS_TOTAL, line)
+        if RAW_DATA_LONGEST_MAP_TIME in line:
+            addResult(nnbench_results, RAW_DATA_LONGEST_MAP_TIME, line)
+        if RAW_DATA_LATE_MAPS in line:
+            addResult(nnbench_results, RAW_DATA_LATE_MAPS, line)
+        if RAW_DATA_EXCEPTIONS in line:
+            addResult(nnbench_results, RAW_DATA_EXCEPTIONS, line)
+
+    return nnbench_results
 
 def extractDFSIOResults(lines):
     """It scans through the console output of `hadoop jar TestDFSIO` tool and extracts the outcome
@@ -764,12 +927,16 @@ def main():
 # Extracting results from output
             testResult = {}
             extractedResults = {}
-            if testRunConfig.get(testName, COMMAND) == YCSB:
+            command = testRunConfig.get(testName, COMMAND)
+            if command == YCSB:
                 extractedResults = extractYSCBResults(lines)
             elif testRunConfig.get(testName, 'tool') == 'pe':
                 extractedResults = extractPEResults(lines)
-            elif testRunConfig.get(testName, COMMAND) == HADOOP:
+            elif command == HADOOP and testRunConfig.get(testName, JAR_CLASS) == 'TestDFSIO':
                 extractedResults = extractDFSIOResults(lines)
+            elif command == HADOOP and testRunConfig.get(testName, JAR_CLASS) == 'nnbench':
+                extractedResults = extractNNBenchResults(lines)
+
 
             testResult.update(extractedResults)
             testResult[EXECUTION_TIME] = executionTime
