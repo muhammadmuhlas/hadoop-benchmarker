@@ -57,3 +57,56 @@ In addition to YCSB properties, following attributes are required for ycsb tests
 - `tool`, the value must be `load` or `run`
 - `dbType` for hbase test, `hbase10` should be used.
 - `table` , the table which will be used for the test. Please note, ycsb doesn't create table and this table should be created prior to running the test.
+
+## TestDFSIO
+The TestDFSIO is widely used to benchmark HDFS component of Hadoop. It helps to find bottlenecks in network, hardware, OS and even in hadoop configurations. TestDFSIO starts a map reduce jobs to write and read data in hdfs. `write` test needs to be performed before `read` test can be executed.
+
+### Installation
+`TestDFSIO` is part of hadoop distribution. e.g. in Hortonworks distribution the jar file containing this test is located at `/us/hdp/current/hadoop-mapreduce-client/hadoop-mapreduce-client-jobclient-tests.jar`. No extra steps are required to use this tool.
+
+### TestDFSIO Test Configuration
+When configuring TestDFSIO tests, following attributes are supported.
+
+- `command` - the value is `hadoop`
+- `tool` - the value is `jar`
+- `jarFilePath` - the location of jar file containing `TestDFSIO` tool.
+- `jarClass` - the value is `TestDFSIO`
+- `numberFiles` - number of files, `TestDFSIO` will write or read.
+- `fileSize` - the size of each file written/read by `TestDFSIO`
+- `testProperties` - comma separated properties which are supplied to `TestDFSIO` program as jvm params. e.g. hadoop wide configuration can be defined to override the default values in hadoop configuration files.
+- `testType` - test which will be executed. e.g. `write` or `read`
+
+### Sample Configuration
+A sample configuration file `sample_testdfsio.cfg` is provided in `conf` directory of the project.
+
+## NNBench
+`NNBench` is useful in benchmarking namenode. It makes lot of requests to namenode with a very small payload. It can issue write, read, delete, rename operations.
+
+### Installation
+`nnbench` is part of hadoop distribution. e.g. in Hortonworks distribution the jar file containing this test is located at `/us/hdp/current/hadoop-mapreduce-client/hadoop-mapreduce-client-jobclient-tests.jar`. No extra steps are required to use this tool.
+
+### nnbench Test Configuration
+
+When configuring `nnbench` tests, following attributes are supported.
+
+- `command` - the value is `hadoop`
+- `tool` - the value is `jar`
+- `jarFilePath` - the location of jar file containing `nnbench` tool.
+- `jarClass` - the value is `nnbench`
+- `operation` - the operation `nnbench` will perform. `create_write`, `open_read`, `delete`, `rename` are valid values.
+- `maps` - number of maps
+- `reduces` - number of reducers
+- `startTime` - time to start, given in seconds from the epoch.
+- `blockSize` - Block size in bytes. 
+- `bytesToWrite` - Bytes to write.
+- `bytesPerChecksum` - Bytes per checksum for the files.
+- `numberOfFiles` - number of files to create.
+- `replicationFactorPerFile` - Replication factor for the files.
+- `baseDir` - base DFS path. default is /becnhmarks/NNBench.
+- `readFileAfterOpen` - true or false. if true, it reads the file and reports the average time to read. This is valid with the open_read operation.
+
+### Sample Configurations
+A sample configuration `sample_nnbench.cfg` is provided in `conf` directory of this project.
+
+
+    
