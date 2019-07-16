@@ -304,7 +304,7 @@ def copyHadoopConfigFiles(targetDir):
 
     Returns: None
     """
-    configFiles = ['/usr/local/hadoop/etc/hadoop/conf/core-site.xml', '/usr/local/hadoop/etc/hadoop/conf/hdfs-site.xml']
+    configFiles = ['/usr/local/hadoop/etc/hadoop/core-site.xml', '/usr/local/hadoop/etc/hadoop/hdfs-site.xml']
     confDir = os.path.join(targetDir, "conf")
     createDirectories([confDir])
 
