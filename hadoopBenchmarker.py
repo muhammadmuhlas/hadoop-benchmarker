@@ -9,7 +9,8 @@ import shutil
 import csv
 import shlex
 import sys
-# constants
+
+
 FILE_FLAG_CREATE_IF_NOT_EXISTS = "a+"
 LOG_DIR = "/tmp/logs"
 RESULT_DIR = "/tmp/results"
@@ -21,29 +22,19 @@ HADOOP = 'hadoop'
 NAME = 'Name'
 SUMMARY = 'summary'
 OPERATIONS = 'operations'
-UPDATE = 'update'
-INSERT = 'insert'
-READ = 'read'
 TYPE = 'TestType'
 RECORDS = 'Records'
 APP_CONFIG = 'APP_CONFIG'
 JAR_CLASS = 'jarClass'
 
-
-# global object
 appCfg = None
 
-
-
-#create a parser which evaluate command line arguments.
 def createArgumentParser():
     usage = './bin/hadoop-benchmarker.sh --config-file <configFileName>'
     parser = argparse.ArgumentParser(usage=usage)
     parser.add_argument('--config-file','-c' , dest='configFile', required=True)
     return parser
 
-# configuration for tests are loaded. The configuration files are expected to be
-# in conf directory
 def loadConfiguration(configFile):
     config = ConfigParser.ConfigParser(allow_no_value=True)
     config.optionxform = str
@@ -72,7 +63,8 @@ def getTestTerasortArguments(config, testName):
     'TEST_TYPE': 'testType',
     'NUMBER_FILES': 'numberFiles',
     'FILE_SIZE': 'fileSize',
-    'TEST_PROPERTIES': 'testProperties'
+    'DIR_INPUT': 'dirInput',
+    'DIR_OUTPUT': 'dirOutput'
     }
 
     jarFilePath = ''
@@ -90,26 +82,21 @@ def getTestTerasortArguments(config, testName):
             jarClass = config.get(testName, option)
         elif option == TERASORTARGS['FILE_SIZE']:
             fileSize = config.get(testName, option)
-        elif option == TERASORTARGS['TEST_PROPERTIES']:
-            testProperties = config.get(testName, option)
+        elif option == TERASORTARGS['DIR_INPUT']:
+            dirInput = config.get(testName, option)
+        elif option == TERASORTARGS['DIR_OUTPUT']:
+            dirOutput = config.get(testName, option)
 
     args = []
     args.append(HADOOP)
     args.append('jar')
     args.append(jarFilePath)
     args.append(jarClass)
-
-    props = testProperties.split(',')
-
-    for prop in props:
-        args.append('-D')
-        args.append(prop)
-
-    args.append('-fileSize')
     args.append(fileSize)
+    args.append(dirInput)
+    args.append(dirOutput)
 
     return args
-
 
 def getTestDfsioArguments(config, testName):
     DFSIOARGS = {
@@ -163,8 +150,6 @@ def getTestDfsioArguments(config, testName):
 
     return args
 
-#This function validates the commands and tools and raise an error, command
-# and tool are not in allowed list
 def constructCommand(config, testName):
     process = []
     allowedCommands = [HADOOP]
@@ -227,21 +212,9 @@ def extractDFSIOResults(lines):
 
 def extractTerasortResults(lines):
     terasort_results = {}
-    TOTAL_MBYTES_PROCESSED_KEY = "Total MBytes processed"
-    THROUGHPUT_KEY = "Throughput mb/sec"
-    AVERAGE_IO_KEY = "Average IO rate mb/sec"
-    IO_RATE_STD_DEVIATION_KEY = "IO rate std deviation"
-    TEST_EXEC_TIME_KEY = "Test exec time sec"
+    TEST_EXEC_TIME_KEY = "Total time spent by all map tasks (ms)"
 
     for line in lines:
-        if TOTAL_MBYTES_PROCESSED_KEY in line:
-            addResult(terasort_results, TOTAL_MBYTES_PROCESSED_KEY, line)
-        if THROUGHPUT_KEY in line:
-            addResult(terasort_results, THROUGHPUT_KEY, line)
-        if AVERAGE_IO_KEY in line:
-            addResult(terasort_results, AVERAGE_IO_KEY, line)
-        if IO_RATE_STD_DEVIATION_KEY in line:
-            addResult(terasort_results, IO_RATE_STD_DEVIATION_KEY, line)
         if TEST_EXEC_TIME_KEY in line:
             addResult(terasort_results, TEST_EXEC_TIME_KEY, line)
 
@@ -274,7 +247,6 @@ def saveServerSideConfig(resultDir, rsUrl):
 
     executeCommand(shlex.split(command))
 
-# Main runner
 def main():
     log('Starting Tests....')
     argParser = createArgumentParser()
