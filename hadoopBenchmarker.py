@@ -17,8 +17,6 @@ RESULT_DIR = "/tmp/results"
 EXECUTION_TIME = 'ExecutionTime'
 PARAMS = 'params'
 COMMAND = 'command'
-YCSB = 'ycsb'
-HBASE = 'hbase'
 HADOOP = 'hadoop'
 NAME = 'Name'
 SUMMARY = 'summary'
@@ -96,272 +94,10 @@ def getTestRunParams(config, testName):
         params[option] = value
 
     return params
-#This function extracts the argument of the command.
-def getPeArguments(config, testName):
-    """reads configuration for PE test and construct an array of all parameters
-    Args:
-       config: ConfigParser
-       testName: string
-    Returns:
-         args: dict
-    """
-    args = []
-    commandArgs =''
-    peTestType = ''
-    options = config.options(testName)
-    for option in options:
-        if (option != 'tool') & (option != 'command'):
-            if option == 'nClients':
-                commandArgs = config.get(testName, option)
-                continue
-            if option == 'TestType':
-                peTestType = config.get(testName, option)
-                continue
-            value = config.get(testName, option)
-            if not value:
-                args.append(option)
-                continue
-            args.append(option+"="+value)
 
-    if peTestType:
-        args.append(peTestType)
+def getTestTerasortArguments(config, testName):
 
-    if commandArgs:
-        args.append(commandArgs)
-    return args
-
-# extract YCSB arguments
-def getYCSBArguments(config, testName):
-    """This reads `config` for given `testName` and construct a ycsb command to
-    execute.
-    Args:
-         config obj: obj contains the configuration for this run.
-         testName (str): The section name in config file.
-    Returns:
-            a list consists of all the parts of `ycsb` command
-    """
-
-    YCSBARGS = {
-    'YCSB_HOME' : 'ycsb_home',
-    'OPERATION' : 'tool',
-    'DBTYPE' : 'dbType',
-    'WORKLOAD' : 'workload',
-    'TABLE' : 'table',
-    'COLUMNFAMILY' : 'columnfamily',
-    'PRINCIPAL' : 'principal',
-    'KEYTAB' : 'keytab',
-    'THREADS' : 'threads',
-    'TARGET' : 'target',
-    'JVM-ARGS' : 'jvm-args'
-    }
-
-    ycsb_home = ''
-    operation = ''
-    dbType = ''
-    workload = ''
-    table = ''
-    columnfamily = ''
-    principal = ''
-    keytab = ''
-    thread = ''
-    target = ''
-    jvm_args = ''
-    other_args = ''
-
-    options = config.options(testName)
-    for option in options:
-        if option == YCSBARGS['YCSB_HOME']:
-            ycsb_home = config.get(testName, option)
-        elif option == YCSBARGS['OPERATION']:
-            operation = config.get(testName, option)
-        elif option == YCSBARGS['DBTYPE']:
-            dbType = config.get(testName, option)
-        elif option == YCSBARGS['WORKLOAD']:
-            workload = config.get(testName, option)
-        elif option == YCSBARGS['TABLE']:
-            table = config.get(testName, option)
-        elif option == YCSBARGS['COLUMNFAMILY']:
-            columnfamily = config.get(testName, option)
-        elif option == YCSBARGS['PRINCIPAL']:
-            principal = config.get(testName, option)
-        elif option == YCSBARGS['KEYTAB']:
-            keytab = config.get(testName, option)
-        elif option == YCSBARGS['THREADS']:
-            thread = config.get(testName, option)
-        elif option == YCSBARGS['TARGET']:
-            target = config.get(testName, option)
-        elif option == YCSBARGS['JVM-ARGS']:
-            jvm_args = config.get(testName, option)
-        elif option == 'command':
-            continue
-        else:
-            value = config.get(testName, option)
-            arg = option
-            if value:
-                arg = option +'='+ str(value)
-            if other_args:
-                other_args += ','+arg
-            else:
-                other_args = arg
-# validating arguments
-    if not ycsb_home:
-        raise Exception(YCSBARGS['YCSB_HOME'] + " is required")
-    if not operation:
-        raise Exception(YCSBARGS['OPERATION'] + " is required")
-    if not dbType:
-        raise Exception(YCSBARGS['DBTYPE'] + " is required")
-    if not workload:
-        raise Exception(YCSBARGS['WORKLOAD'] + " is required")
-
-# construct ycsb command
-    ycsb_command = os.path.join(ycsb_home,'bin/ycsb')
-
-    hbase_classpath = executeCommand(['hbase','classpath'])
-
-    args = []
-    args.append(ycsb_command)
-    args.append(operation)
-    args.append(dbType)
-    args.append('-P')
-    args.append(workload)
-    args.append('-cp')
-    args.append(hbase_classpath[0].strip())
-
-    if table:
-        args.append('-p')
-        args.append('table='+table)
-    if columnfamily:
-        args.append('-p')
-        args.append('columnfamily='+columnfamily)
-    if principal:
-        args.append('-p')
-        args.append('principal='+principal)
-    if keytab:
-        args.append('-p')
-        args.append('keytab='+keytab)
-    if thread:
-        args.append('-threads')
-        args.append(thread)
-    if target:
-        args.append('-target')
-        args.append(target)
-
-    if other_args:
-        for ar in other_args.split(','):
-            args.append('-p')
-            args.append(ar)
-
-    return args
-
-def getNNBenchArguments(config, testName):
-    """This reads `config` for given `testName` and construct a nnbench command to
-    execute.
-    Args:
-        config obj: obj contains the configuration for this run.
-        testName (str): The section name in config file.
-    Returns:
-        a list consists of all the parts of `nnbench` test
-    """
-    NNBENCHARGS = {
-    'JAR_FILE_PATH': 'jarFilePath',
-    'JAR_CLASS': 'jarClass',
-    'OPERATION': 'operation',
-    'MAPS': 'maps',
-    'REDUCES': 'reduces',
-    'START_TIME': 'starttime',
-    'BLOCK_SIZE': 'blockSize',
-    'BYTES_TO_WRITE': 'bytesToWrite',
-    'BYTES_PER_CHECKSUM': 'bytesPerChecksum',
-    'NUMBER_FILES': 'numberOfFiles',
-    'REPLICATION_FACTOR_PER_FILE': 'replicationFactorPerFile',
-    'BASE_DIR': 'baseDir',
-    'READ_FILE_AFTER_OPEN': 'readFileAfterOpen'
-    }
-    jarFilePath = ''
-    jarClass = ''
-    operation = ''
-    maps = ''
-    reduces = ''
-    startTime = ''
-    blockSize = ''
-    bytesToWrite = ''
-    bytesPerChecksum = ''
-    numberOfFiles = ''
-    replicationFactorPerFile = ''
-    baseDir = ''
-    readFileAfterOpen = ''
-
-    options = config.options(testName)
-
-    for option in options:
-        optionValue = config.get(testName, option)
-        if option == NNBENCHARGS['JAR_FILE_PATH']:
-            jarFilePath = optionValue
-        elif option == NNBENCHARGS['JAR_CLASS']:
-            jarClass = optionValue
-        elif option == NNBENCHARGS['OPERATION']:
-            operation = optionValue
-        elif option == NNBENCHARGS['MAPS']:
-            maps = optionValue
-        elif option == NNBENCHARGS['REDUCES']:
-            reduces = optionValue
-        elif option == NNBENCHARGS['START_TIME']:
-            startTime = optionValue
-        elif option == NNBENCHARGS['BLOCK_SIZE']:
-            blockSize = optionValue
-        elif option == NNBENCHARGS['BYTES_TO_WRITE']:
-            bytesToWrite = optionValue
-        elif option == NNBENCHARGS['BYTES_PER_CHECKSUM']:
-            bytesPerChecksum = optionValue
-        elif option == NNBENCHARGS['NUMBER_FILES']:
-            numberOfFiles = optionValue
-        elif option == NNBENCHARGS['REPLICATION_FACTOR_PER_FILE']:
-            replicationFactorPerFile = optionValue
-        elif option == NNBENCHARGS['BASE_DIR']:
-            baseDir = optionValue
-        elif option == NNBENCHARGS['READ_FILE_AFTER_OPEN']:
-            readFileAfterOpen = optionValue
-
-    args = []
-    args.append(HADOOP)
-    args.append('jar')
-    args.append(jarFilePath)
-    args.append(jarClass)
-
-    args.append('-operation')
-    args.append(operation)
-    if maps:
-        args.append('-maps')
-        args.append(maps)
-    if reduces:
-        args.append('-reduces')
-        args.append(reduces)
-    if startTime:
-        args.append('-startTime')
-        args.append(startTime)
-    if blockSize:
-        args.append('-blockSize')
-        args.append(blockSize)
-    if bytesToWrite:
-        args.append('-bytesToWrite')
-        args.append(bytesToWrite)
-    if bytesPerChecksum:
-        args.append('-bytesPerChecksum')
-        args.append(bytesPerChecksum)
-    if numberOfFiles:
-        args.append('-numberOfFiles')
-        args.append(numberOfFiles)
-    if replicationFactorPerFile:
-        args.append('-replicationFactorPerFile')
-        args.append(replicationFactorPerFile)
-    if baseDir:
-        args.append('-baseDir')
-        args.append(baseDir)
-    if readFileAfterOpen:
-        args.append('-readFileAfterOpen')
-        args.append(readFileAfterOpen)
-
-    return args
+    return
 
 
 def getTestDfsioArguments(config, testName):
@@ -438,8 +174,8 @@ def constructCommand(config, testName):
 
     """
     process = []
-    allowedCommands = [HADOOP, HBASE, YCSB]
-    allowedTools = ['jar', 'pe', 'load', 'run']
+    allowedCommands = [HADOOP]
+    allowedTools = ['jar']
     command = config.get(testName, COMMAND)
     if command not in allowedCommands:
         raise Exception('command: '+command + ' is not supported')
@@ -447,16 +183,10 @@ def constructCommand(config, testName):
     if tool not in allowedTools:
         raise Exception('tool: '+tool + ' is not supported')
 
-    if (command == HBASE) and (tool == 'pe'):
-        process.append(command)
-        process.append(tool)
-        process.extend(getPeArguments(config, testName))
-    elif command == YCSB:
-        process = getYCSBArguments(config, testName)
-    elif command == HADOOP and config.get(testName, JAR_CLASS) == 'TestDFSIO':
+    if command == HADOOP and config.get(testName, JAR_CLASS) == 'TestDFSIO':
         process = getTestDfsioArguments(config, testName)
-    elif command == HADOOP and config.get(testName, JAR_CLASS) == 'nnbench':
-        process = getNNBenchArguments(config, testName)
+    elif command == HADOOP and config.get(testName, JAR_CLASS) == 'Terasort':
+        process = getTestTerasortArguments(config, testName)
 
     return process
 
@@ -500,57 +230,6 @@ def addResult(results, key, line):
     value = data[1].strip()
     results[key] = value
 
-
-def extractNNBenchResults(lines):
-    """It scans through the console output of `hadoop jar nnbench` tool and extracts the outcome
-    of the the run.
-
-    Args:
-        lines: list of console output lines
-
-    Returns:
-           dict: It returns dictionary containing
-           a section from the `hadoop jar nnbench` output.
-    """
-    nnbench_results = {}
-    SUCCESSFUL_FILE_OPS = "Successful file operations"
-    MAPS_MISSED_BARRIER = "maps that missed the barrier"
-    TPS_OPEN_READ = "TPS: Open/Read"
-    AVG_EXEC_TIME_OPEN_READ = "Avg Exec time (ms): Open/Read"
-    AVG_LAT_OPEN = "Avg Lat (ms): Open"
-    RAW_DATA_AL_TOTAL_1 = "RAW DATA: AL Total #1"
-    RAW_DATA_AL_TOTAL_2 = "RAW DATA: AL Total #2"
-    RAW_DATA_TPS_TOTAL = "RAW DATA: TPS Total (ms)"
-    RAW_DATA_LONGEST_MAP_TIME = "RAW DATA: Longest Map Time (ms)"
-    RAW_DATA_LATE_MAPS = "RAW DATA: Late maps"
-    RAW_DATA_EXCEPTIONS = "RAW DATA: # of exceptions"
-
-    for line in lines:
-        if SUCCESSFUL_FILE_OPS in line:
-            addResult(nnbench_results, SUCCESSFUL_FILE_OPS, line)
-        if MAPS_MISSED_BARRIER in line:
-            addResult(nnbench_results, MAPS_MISSED_BARRIER, line)
-        if TPS_OPEN_READ in line:
-            addResult(nnbench_results, TPS_OPEN_READ, line)
-        if AVG_EXEC_TIME_OPEN_READ in line:
-            addResult(nnbench_results, AVG_EXEC_TIME_OPEN_READ, line)
-        if AVG_LAT_OPEN in line:
-            addResult(nnbench_results, AVG_LAT_OPEN, line)
-        if RAW_DATA_AL_TOTAL_1 in line:
-            addResult(nnbench_results, RAW_DATA_AL_TOTAL_1, line)
-        if RAW_DATA_AL_TOTAL_2 in line:
-            addResult(nnbench_results, RAW_DATA_AL_TOTAL_2, line)
-        if RAW_DATA_TPS_TOTAL in line:
-            addResult(nnbench_results, RAW_DATA_TPS_TOTAL, line)
-        if RAW_DATA_LONGEST_MAP_TIME in line:
-            addResult(nnbench_results, RAW_DATA_LONGEST_MAP_TIME, line)
-        if RAW_DATA_LATE_MAPS in line:
-            addResult(nnbench_results, RAW_DATA_LATE_MAPS, line)
-        if RAW_DATA_EXCEPTIONS in line:
-            addResult(nnbench_results, RAW_DATA_EXCEPTIONS, line)
-
-    return nnbench_results
-
 def extractDFSIOResults(lines):
     """It scans through the console output of `hadoop jar TestDFSIO` tool and extracts the outcome
     of the the run.
@@ -584,118 +263,38 @@ def extractDFSIOResults(lines):
 
     return dfsio_results
 
-def getLatencyRecord(line):
-    """
-    """
-    tmp = "hbase.PerformanceEvaluation:"
-    matricsRaw = line[line.index(tmp)+len(tmp):]
-    matrics = matricsRaw.split(",")
-    latency = {}
-
-    for mat in matrics:
-        stripMatric = mat.strip()
-        if "/" in stripMatric:
-            latency['datarange'] = stripMatric
-        else:
-            pair = stripMatric.split("=")
-            latency[pair[0]] = pair[1]
-    return latency
-
-
-def extractPEResults(lines):
-    """It scans through the console output of `hbase pe` tool and extracts the outcome
+def extractTerasortResults(lines):
+    """It scans through the console output of `hadoop jar Terasort` tool and extracts the outcome
     of the the run.
 
     Args:
         lines: list of console output lines
 
     Returns:
-           dict: It returns dictionary of dictionaries. Each sub dictionary contains
-           a section from the `hbase pe` output.
+           dict: It returns dictionary containing
+           a section from the `hadoop jar Terasort` output.
     """
 
-    pe_results = {}
-    SUMMARY_KEY = "Summary of timings"
-    LATENCY_KEY = ", latency mean="
-    summary_results = {}
-    latency_results = []
+    terasort_results = {}
+    TOTAL_MBYTES_PROCESSED_KEY = "Total MBytes processed"
+    THROUGHPUT_KEY = "Throughput mb/sec"
+    AVERAGE_IO_KEY = "Average IO rate mb/sec"
+    IO_RATE_STD_DEVIATION_KEY = "IO rate std deviation"
+    TEST_EXEC_TIME_KEY = "Test exec time sec"
+
     for line in lines:
-        if SUMMARY_KEY in line:
-            data = line[line.index(SUMMARY_KEY):].split(":")
-            key = data[0].strip()
-            values = data[1].strip()[1:-1].split(',')
-            summary_results[key] = values
-            int_timinigs = map(lambda x: int(x), values)
-            sum = reduce(lambda x,y: x+y, int_timinigs)
-            average = sum/float(len(int_timinigs))
-            summary_results['AverageRuntime'] = average
-        if LATENCY_KEY in line:
-            latency_results.append(getLatencyRecord(line))
+        if TOTAL_MBYTES_PROCESSED_KEY in line:
+            addResult(terasort_results, TOTAL_MBYTES_PROCESSED_KEY, line)
+        if THROUGHPUT_KEY in line:
+            addResult(terasort_results, THROUGHPUT_KEY, line)
+        if AVERAGE_IO_KEY in line:
+            addResult(terasort_results, AVERAGE_IO_KEY, line)
+        if IO_RATE_STD_DEVIATION_KEY in line:
+            addResult(terasort_results, IO_RATE_STD_DEVIATION_KEY, line)
+        if TEST_EXEC_TIME_KEY in line:
+            addResult(terasort_results, TEST_EXEC_TIME_KEY, line)
 
-    if not summary_results:
-        summary_results['ERROR'] = "No results found, please see log files"
-
-    pe_results['summary'] = summary_results
-    pe_results['latencies'] = latency_results
-
-    return pe_results
-
-
-def extractYSCBResults(lines):
-    """It scans through the console output of YSCB tool and extracts the outcome
-    of the the run.
-
-    Args:
-        lines: list of console output lines
-
-    Returns:
-           dict: It returns dictionary of dictionaries. Each sub dictionary contains
-           a section from the ycsb output.
-    """
-
-    ycsb_results = {}
-    OVERALL_KEY = '[OVERALL]'
-    CLEANUP_KEY = '[CLEANUP]'
-    INSERT_KEY = '[INSERT]'
-    READ_KEY = '[READ]'
-    UPDATE_KEY = '[UPDATE]'
-
-    summary_results = {}
-    cleanup_results = {}
-    insert_results = {}
-    read_results = {}
-    update_results = {}
-    splittedLine = []
-    for line in lines:
-        if OVERALL_KEY in line:
-            splittedLine = line.split(',')
-            summary_results[splittedLine[1].strip()] = splittedLine[2].strip()
-        elif CLEANUP_KEY in line:
-            splittedLine = line.split(',')
-            cleanup_results[splittedLine[1].strip()] = splittedLine[2].strip()
-        elif INSERT_KEY in line:
-            splittedLine = line.split(',')
-            insert_results[splittedLine[1].strip()] = splittedLine[2].strip()
-        elif READ_KEY in line:
-            splittedLine = line.split(',')
-            read_results[splittedLine[1].strip()] = splittedLine[2].strip()
-        elif UPDATE_KEY in line:
-            splittedLine = line.split(',')
-            update_results[splittedLine[1].strip()] = splittedLine[2].strip()
-
-    if not summary_results:
-        summary_results["ERROR"] = "No results found, please see log files"
-
-    ycsb_results[SUMMARY] = summary_results
-
-    operations = {}
-    operations[READ] = read_results
-    operations['cleanup'] = cleanup_results
-    operations[INSERT] = insert_results
-    operations[UPDATE] = update_results
-    ycsb_results[OPERATIONS] = operations
-
-    return ycsb_results
+    return terasort_results
 
 def copyHadoopConfigFiles(targetDir):
     """ copies hadoop configuration file to result directory so configuration can be captured when tests were executed.
@@ -705,139 +304,12 @@ def copyHadoopConfigFiles(targetDir):
 
     Returns: None
     """
-    configFiles = ['/etc/hadoop/conf/core-site.xml', '/etc/hadoop/conf/hdfs-site.xml', '/etc/hbase/conf/hbase-site.xml']
+    configFiles = ['/usr/local/hadoop/etc/hadoop/conf/core-site.xml', '/usr/local/hadoop/etc/hadoop/conf/hdfs-site.xml']
     confDir = os.path.join(targetDir, "conf")
     createDirectories([confDir])
 
     for file in configFiles:
         shutil.copy(file, confDir)
-
-def getPERow(TestResult):
-    """
-    Args:
-    Returns:
-    """
-    AverageRuntime = "AverageRuntime(ms)"
-    paramRows = "--rows"
-
-    row = {EXECUTION_TIME: "", TYPE: "", RECORDS: "", AverageRuntime: ""}
-
-    if EXECUTION_TIME in TestResult.keys():
-        row[EXECUTION_TIME] = TestResult[EXECUTION_TIME]
-
-    if SUMMARY in TestResult.keys():
-        str_timings = TestResult[SUMMARY]['Summary of timings (ms)']
-        int_timinigs = map(lambda x: int(x), str_timings)
-        sum = reduce(lambda x,y: x+y, int_timinigs)
-
-        average = sum/float(len(int_timinigs))
-        row[AverageRuntime] = str(average)
-
-    if PARAMS in TestResult.keys():
-        row[TYPE] = TestResult[PARAMS][TYPE]
-        if paramRows in TestResult[PARAMS].keys():
-            row[RECORDS] = TestResult[PARAMS][paramRows]
-        else:
-            row[RECORDS] = "1000000"
-
-    return row
-
-def getYCSBRow(TestResult):
-    """
-
-    Args:
-
-    Returns:
-
-    """
-    RUNTIME = 'RunTime(ms)'
-    THROUGHPUT = 'Throughput(ops/sec)'
-    READOPSCOUNT = 'ReadOpsCount'
-    READOPS_AVERAGELATENCY = 'ReadOps_AverageLatency(us)'
-    INSERTOPSCOUNT = 'InsertOpsCount'
-    INSERTOPS_AVERAGELATENCY = 'InsertOps_AverageLatency(us)'
-    UPDATEOPSCOUNT = 'UpdateOpsCount'
-    UPDATEOPS_AVERAGELATENCY = 'UpdateOps_AverageLatency(us)'
-
-    # Initialize row
-    row = {EXECUTION_TIME : '', TYPE : '', RECORDS : '', RUNTIME : '', THROUGHPUT : '',
-           READOPSCOUNT : '', READOPS_AVERAGELATENCY :'',
-           INSERTOPSCOUNT : '', INSERTOPS_AVERAGELATENCY : '',
-           UPDATEOPSCOUNT : '', UPDATEOPS_AVERAGELATENCY : ''}
-
-    if PARAMS in TestResult.keys():
-        row[RECORDS] = TestResult[PARAMS]['recordcount']
-        row[TYPE] = TestResult[PARAMS]['tool']
-
-    if EXECUTION_TIME in TestResult.keys():
-        row[EXECUTION_TIME] = TestResult[EXECUTION_TIME]
-
-    if SUMMARY in TestResult.keys():
-        row[RUNTIME] = TestResult[SUMMARY][RUNTIME]
-        row[THROUGHPUT] = TestResult[SUMMARY][THROUGHPUT]
-
-    if OPERATIONS in TestResult.keys():
-        if TestResult[OPERATIONS][READ]:
-            row[READOPSCOUNT] = TestResult[OPERATIONS][READ]['Operations']
-            row[READOPS_AVERAGELATENCY] = TestResult[OPERATIONS][READ]['AverageLatency(us)']
-
-        if TestResult[OPERATIONS][INSERT]:
-            row[INSERTOPSCOUNT] = TestResult[OPERATIONS][INSERT]['Operations']
-            row[INSERTOPS_AVERAGELATENCY] = TestResult[OPERATIONS][INSERT]['AverageLatency(us)']
-
-        if TestResult[OPERATIONS][UPDATE]:
-            row[UPDATEOPSCOUNT] = TestResult[OPERATIONS][UPDATE]['Operations']
-            row[UPDATEOPS_AVERAGELATENCY] = TestResult[OPERATIONS][UPDATE]['AverageLatency(us)']
-
-    return row
-
-def createTabularSummary(resultFilepath):
-    """ It reads `resultFile` and extract subset of output fields to create a summary of results in csv format and save
-    result in results directory.
-
-    Args:
-        `resultFilepath` json file which contains the result of tests.
-
-    Returns: None
-    """
-    if not os.path.exists(resultFilepath):
-        log(resultFilepath +' not exists, please see log files to debug')
-        return
-
-    resultDir = os.path.dirname(resultFilepath)
-    ycsbSummaryFile = os.path.join(resultDir, "ycsbSummary.csv")
-    peSummaryFile = os.path.join(resultDir, "peSummary.csv")
-
-    ycsbHeader = ['Name', 'ExecutionTime', 'TestType', 'Records', 'RunTime(ms)', 'Throughput(ops/sec)',
-                  'ReadOpsCount', 'ReadOps_AverageLatency(us)', 'InsertOpsCount','InsertOps_AverageLatency(us)',
-                  'UpdateOpsCount', 'UpdateOps_AverageLatency(us)']
-
-    peHeader = [NAME, EXECUTION_TIME, TYPE, RECORDS,'AverageRuntime(ms)']
-
-    with open(resultFilepath) as source:
-        with open(ycsbSummaryFile, FILE_FLAG_CREATE_IF_NOT_EXISTS) as ycsbFile, open(peSummaryFile, FILE_FLAG_CREATE_IF_NOT_EXISTS) as peFile:
-            ycsbWriter = csv.DictWriter(ycsbFile, delimiter=',', lineterminator='\n',fieldnames=ycsbHeader)
-            peWriter = csv.DictWriter(peFile, delimiter=',', lineterminator='\n',fieldnames=peHeader)
-
-            #writing headers
-            ycsbWriter.writeheader()
-            peWriter.writeheader()
-
-            testResults = json.load(source)
-
-            for testResult in testResults:
-                row = {}
-                row[NAME] = testResult[NAME]
-
-                if YCSB == testResult[PARAMS][COMMAND]:
-                    row.update(getYCSBRow(testResult))
-                    ycsbWriter.writerow(row)
-                elif HBASE == testResult[PARAMS][COMMAND]:
-                    row.update(getPERow(testResult))
-                    peWriter.writerow(row)
-                else:
-                    log(data[testName][PARAMS][COMMAND] + ' is not supported')
-
 
 def copyResultsToHdfs(testResultDir):
     """ It upload result folder to HDFS directory.
@@ -853,24 +325,6 @@ def copyResultsToHdfs(testResultDir):
     command.append(appCfg.get(APP_CONFIG,'hdfs_location'))
 
     executeCommand(command)
-
-def createHbaseTable(config):
-    table_name = config.defaults().get('table')
-    column_family = config.defaults().get('columnfamily')
-    splits = config.defaults().get('splits')
-    create_table_statement = "create '"+table_name+"', '"+column_family+"'"
-    if splits:
-        splits_section = "{SPLITS => (1.."+splits+").map {|i| \"user#{1000+i*(9999-1000)/"+splits+"}\"}}"
-        create_table_statement += ", "+splits_section
-    with open('/tmp/ycsb_hbase_table_create.ql', 'w') as schemaFile:
-        schemaFile.write("disable '"+table_name+"'\n")
-        schemaFile.write("drop '"+table_name+"'\n")
-        schemaFile.write(create_table_statement+"\n")
-        schemaFile.write("exit")
-
-
-    command = "hbase shell /tmp/ycsb_hbase_table_create.ql"
-    executeCommand(shlex.split(command))
 
 def saveServerSideConfig(resultDir, rsUrl):
     outputFile = os.path.join(resultDir, 'resourceManagerConfig.xml')
@@ -904,8 +358,6 @@ def main():
 
     table_name = testRunConfig.defaults().get('table')
     command = testRunConfig.defaults().get('command')
-    if command == YCSB and table_name:
-        createHbaseTable(testRunConfig)
 
     results = []
     for testName in testNames:
@@ -926,14 +378,10 @@ def main():
             testResult = {}
             extractedResults = {}
             command = testRunConfig.get(testName, COMMAND)
-            if command == YCSB:
-                extractedResults = extractYSCBResults(lines)
-            elif testRunConfig.get(testName, 'tool') == 'pe':
-                extractedResults = extractPEResults(lines)
-            elif command == HADOOP and testRunConfig.get(testName, JAR_CLASS) == 'TestDFSIO':
+            if command == HADOOP and testRunConfig.get(testName, JAR_CLASS) == 'TestDFSIO':
                 extractedResults = extractDFSIOResults(lines)
-            elif command == HADOOP and testRunConfig.get(testName, JAR_CLASS) == 'nnbench':
-                extractedResults = extractNNBenchResults(lines)
+            elif command == HADOOP and testRunConfig.get(testName, JAR_CLASS) == 'Terasort':
+                extractedResults = extractTerasortResults(lines)
 
 
             testResult.update(extractedResults)
@@ -954,12 +402,7 @@ def main():
     resultsFile.close()
 
     copyHadoopConfigFiles(testResultDir)
-    hbaseConfUrl = appCfg.get(APP_CONFIG, 'hbase_conf_url')
-    if hbaseConfUrl:
-        saveServerSideConfig(testResultDir, hbaseConfUrl)
     copyResultsToHdfs(testResultDir)
-#    createTabularSummary(resultFileName)
-
 
 if __name__ == '__main__':
     main()
