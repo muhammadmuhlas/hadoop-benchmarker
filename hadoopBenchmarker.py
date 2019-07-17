@@ -6,10 +6,7 @@ import os
 import traceback
 import json
 import shutil
-import csv
 import shlex
-import sys
-
 
 FILE_FLAG_CREATE_IF_NOT_EXISTS = "a+"
 LOG_DIR = "/tmp/logs"
@@ -32,7 +29,7 @@ appCfg = None
 def createArgumentParser():
     usage = './bin/hadoop-benchmarker.sh --config-file <configFileName>'
     parser = argparse.ArgumentParser(usage=usage)
-    parser.add_argument('--config-file','-c' , dest='configFile', required=True)
+    parser.add_argument('--config-file' ,'-c' ,dest='configFile', required=True)
     return parser
 
 def loadConfiguration(configFile):
@@ -58,21 +55,18 @@ def getTestRunParams(config, testName):
 
 def getTestTerasortArguments(config, testName):
     TERASORTARGS = {
-    'JAR_FILE_PATH': 'jarFilePath',
-    'JAR_CLASS': 'jarClass',
-    'TEST_TYPE': 'testType',
-    'NUMBER_FILES': 'numberFiles',
-    'FILE_SIZE': 'fileSize',
-    'DIR_INPUT': 'dirInput',
-    'DIR_OUTPUT': 'dirOutput'
+        'JAR_FILE_PATH': 'jarFilePath',
+        'JAR_CLASS': 'jarClass',
+        'TEST_TYPE': 'testType',
+        'NUMBER_FILES': 'numberFiles',
+        'FILE_SIZE': 'fileSize',
+        'DIR_INPUT': 'dirInput',
+        'DIR_OUTPUT': 'dirOutput'
     }
 
     jarFilePath = ''
     jarClass = ''
-    testType = ''
-    numberFiles = ''
     fileSize = ''
-    testProperties = ''
 
     options = config.options(testName)
     for option in options:
@@ -264,12 +258,11 @@ def main():
     testResultDir = os.path.join(RESULT_DIR,testRunId)
 
     logFileName = os.path.join(LOG_DIR,testRunId+'.out')
-    resultFileName = os.path.join(testResultDir,'result.json')
+    resultFileName = os.path.join(testResultDir, 'result.json')
 
     outfile = createOpenFile(logFileName, FILE_FLAG_CREATE_IF_NOT_EXISTS)
     resultsFile = createOpenFile(resultFileName, FILE_FLAG_CREATE_IF_NOT_EXISTS)
 
-    table_name = testRunConfig.defaults().get('table')
     command = testRunConfig.defaults().get('command')
 
     results = []
